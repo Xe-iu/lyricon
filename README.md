@@ -71,10 +71,7 @@
 
 ---
 
-## 👥 交流与贡献
-
-- **反馈问题**：遇到 Bug 或有功能建议？请提交 [Issue](https://github.com/tomakino/lyricon/issues)。
-- **参与开发**：我们欢迎任何形式的 Pull Request，共同完善项目。
+## 👥 贡献者
 
 [![Contributors](https://contrib.rocks/image?repo=tomakino/lyricon)](https://github.com/tomakino/lyricon/graphs/contributors)
 
