@@ -102,5 +102,5 @@
 ### 👀 Visitor Count
 
 <p align="center">
-  <img src="https://count.getloli.com/get/@tomakino_lyricon?theme=random" alt="Visitor Counter" />
+  <img src="https://count.getloli.com/get/@tomakino_lyricon?theme=minecraft" alt="Visitor Counter" />
 </p>

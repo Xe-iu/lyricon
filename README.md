@@ -78,6 +78,12 @@
 
 ---
 
+## 🤝 贡献者
+
+[![Contributors](https://contrib.rocks/image?repo=tomakino/lyricon)](https://github.com/tomakino/lyricon/graphs/contributors)
+
+---
+
 ## ⭐ Star History
 
 <p align="center">
@@ -92,8 +98,8 @@
 
 ---
 
-### 👀 访问量
+### 👀 访问趋势
 
 <p align="center">
-  <img src="https://count.getloli.com/get/@tomakino_lyricon?theme=random" alt="访客统计" />
+  <img src="https://count.getloli.com/get/@tomakino_lyricon?theme=minecraft" alt="访客统计" />
 </p>
