@@ -6,7 +6,7 @@
 <h1 align="center">Lyricon</h1>
 
 <p align="center">
-  <b>An Ultra-Minimalist Status Bar Lyrics Extension for Android</b>
+  <b>A minimalist Android tool to enhance status bar lyrics</b>
 </p>
 
 <p align="center">
@@ -14,25 +14,27 @@
   <a href="https://github.com/tomakino/lyricon/releases"><img src="https://img.shields.io/github/downloads/tomakino/lyricon/total?style=flat&color=orange" alt="Downloads"></a>
   <a href="https://github.com/tomakino/lyricon/commits"><img src="https://img.shields.io/github/last-commit/tomakino/lyricon?style=flat" alt="Last Commit"></a>
   <a href="https://github.com/tomakino/lyricon/blob/main/LICENSE"><img src="https://img.shields.io/github/license/tomakino/lyricon?style=flat" alt="License"></a>
-  <a href="README.md"><img src="https://img.shields.io/badge/Document-中文-red.svg" alt="中文"></a>
+  <a href="README-English.md"><img src="https://img.shields.io/badge/Document-English-red.svg" alt="EN"></a>
 </p>
 
 <p align="center">
-  <a href="https://qm.qq.com/q/IXif8Zi0Iq"><img src="https://img.shields.io/badge/QQ Group-0084FF?style=flat&logo=qq&logoColor=white" alt="QQ Group"></a>
   <a href="https://t.me/cslyric"><img src="https://img.shields.io/badge/Telegram-0084FF?style=flat&logo=telegram&logoColor=white" alt="Telegram"></a>
 </p>
 
 <p align="center">
-  <img src="resources/z.gif" alt="Demo Animation" width="600"/>
+  <img src="resources/z.gif" alt="Demo animation" width="600"/>
 </p>
 
 ---
 
 ## ✨ Features
 
-- 🎤 **Rich Display** — Syllable-by-syllable scrolling, lyric translations, and duet indicators.
-- 🧩 **Modular Design** — Limitless expansion of lyric sources via independent plugins.
-- 🎨 **Deep Customization** — Granular control over fonts, logos, positioning, and animations.
+- 🎤 **Rich Display** — Supports word-by-word lyrics, translations, and duet mode for an immersive
+  experience.
+- 🧩 **Modular Extension** — Expand lyric sources infinitely with independent plugins, easily
+  adaptable to various players.
+- 🎨 **Deep Customization** — Adjust fonts, logos, position offsets, and animations to create your
+  own visual style.
 
 ---
 
@@ -40,50 +42,53 @@
 
 ### 📋 Requirements
 
-- **System**: Android 8.1 (API 27) or higher.
-- **Prerequisites**: Rooted device with **LSPosed** framework active.
+- **System Version**: Android 8.1 (API 27) or higher
+- **Prerequisites**: Device must be **Rooted** and have **LSPosed** framework activated
 
 > [!TIP]
-> For optimal stability and compatibility, we recommend using the latest version of LSPosed.
+> It is recommended to use the latest version of LSPosed for optimal compatibility and stability.
 
-### ⚙️ Installation & Configuration
+### ⚙️ Installation & Setup
 
-1. **Download** the latest Lyricon client
+1. **Download the Core App**: Download and install the Lyricon client
    from [Releases](https://github.com/tomakino/lyricon/releases).
-2. **Activate** the module in LSPosed manager, ensuring **System UI** scope is checked.
-3. **Reboot** System UI or your device to apply the hooks.
-4. **Install Plugins** for your music player from the [Plugin Library](#-plugin-ecosystem).
-5. **Customize** anchor position, width, and visual style in the Lyricon app.
-6. **Enjoy** real‑time lyrics in your status bar!
+2. **Activate the Module**: Enable "Lyricon" in the LSPosed manager and ensure **System UI** is
+   checked in scope.
+3. **Reboot to Apply**: Restart System UI or the device to complete the hook injection.
+4. **Install Plugins**:
+   Install the corresponding [lyric plugins](https://github.com/tomakino/LyricProvider) for your
+   music player.
+5. **Customize**: Open the Lyricon app to adjust anchor position, width, and visual style in real
+   time.
+6. **Start Enjoying**: Play music and enjoy lyrics on the status bar.
 
 ---
 
 ## 🧩 Plugin Ecosystem
 
-| Category       | Resource                                                                                                     | Description                                  |
-|:---------------|:-------------------------------------------------------------------------------------------------------------|:---------------------------------------------|
-| **Library**    | [LyricProvider Repository](https://github.com/tomakino/LyricProvider/blob/master/README-English.md)          | Plugins for major music streaming platforms. |
-| **Developers** | [Development Guide](https://github.com/tomakino/lyricon/blob/master/lyric/bridge/provider/README-English.md) | Guidelines for adapting new players.         |
+| Category       | Link                                                                                                 | Description                                     |
+|:---------------|:-----------------------------------------------------------------------------------------------------|:------------------------------------------------|
+| **Plugins**    | [LyricProvider Repository](https://github.com/tomakino/LyricProvider)                                | Collection of plugins for major music platforms |
+| **Developers** | [Development Guide](https://github.com/tomakino/lyricon/blob/master/lyric/bridge/provider/README.md) | Contributions for new player adapters welcome   |
 
 ### 💡 Natively Supported Apps
 
-- [**ConePlayer**](https://coneplayer.trantor.ink/) – An elegant local music player with a focus on
-  design aesthetics.
+- [**Cone Music**](https://coneplayer.trantor.ink/)
 
 ---
 
 ## 👥 Community & Contribution
 
-- **Feedback**: Found a bug or have a suggestion? Please open
+- **Report Issues**: Encounter a bug or have a feature request? Submit
   an [Issue](https://github.com/tomakino/lyricon/issues).
-- **Contribute**: Pull Requests are welcome! Help us improve code quality and features.
+- **Contribute**: We welcome any form of Pull Request to help improve the project.
 
 ---
 
 ## ⭐ Star History
 
 <p align="center">
-  <a href="https://star-history.com/#tomakino/lyricon&Date">
+  <a href="https://www.star-history.com/#tomakino/lyricon&Date">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=tomakino/lyricon&type=Date&theme=dark" />
       <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=tomakino/lyricon&type=Date" />
@@ -94,8 +99,8 @@
 
 ---
 
+### 👀 Visitor Count
+
 <p align="center">
-  <img src="https://count.getloli.com/get/@tomakino_lyricon?theme=moebooru" alt="Visitors" />
-  <br />
-  <i>Proudly developed for the Android community.</i>
+  <img src="https://count.getloli.com/get/@tomakino_lyricon?theme=random" alt="Visitor Counter" />
 </p>

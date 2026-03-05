@@ -3,7 +3,7 @@
   <img src="resources/logo.svg" width="100" alt="词幕 Logo"/>
 </p>
 
-<h1 align="center">词幕 · Lyricon</h1>
+<h1 align="center">词幕</h1>
 
 <p align="center">
   <b>一款极致简约的 Android 状态栏歌词增强工具</b>
@@ -91,6 +91,8 @@
 </p>
 
 ---
+
+### 👀 访问量
 
 <p align="center">
   <img src="https://count.getloli.com/get/@tomakino_lyricon?theme=random" alt="访客统计" />
