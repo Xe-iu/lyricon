@@ -167,7 +167,7 @@ open class LyricPlayerView(
 
             val line = buildLine(value)
 
-            if (canAnimate() && preset != null) {
+            if (canAnimateUpdate() && preset != null) {
                 animateUpdate(preset) {
                     textRecycleLineView.line = line
                     textRecycleLineView.post { textRecycleLineView.tryStartMarquee() }
@@ -328,7 +328,7 @@ open class LyricPlayerView(
                 val preset by lazy {
                     YoYoPresets.getByIds(styleConfig.animOutId, styleConfig.animInId)
                 }
-                if (canAnimate() && preset != null) {
+                if (canAnimateUpdate() && preset != null) {
                     activeLyricLines[0] = newLine
                     recycleView.beginAnimationTransition()
                     recycleView.line = newLine
@@ -653,7 +653,7 @@ open class LyricPlayerView(
         viewTreeObserver.addOnGlobalLayoutListener(viewTreeObserverListener)
     }
 
-    private fun canAnimate(): Boolean {
+    private fun canAnimateUpdate(): Boolean {
         if (!animationsEnabled) return false
         if (!styleConfig.enableAnim) return false
         if (!isAttachedToWindow || !isShown) return false
