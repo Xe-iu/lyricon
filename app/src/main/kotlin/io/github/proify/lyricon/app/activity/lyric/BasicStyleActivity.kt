@@ -257,13 +257,21 @@ class BasicLyricStyleActivity : AbstractLyricActivity() {
                         ).value
                     )
 
-                    InputPreference(
-                        sharedPreferences = preferences,
-                        key = "lyric_style_base_statusbar_color_anchor_id",
+                    val colorAnchorId = rememberStringPreference(
+                        preferences,
+                        "lyric_style_base_statusbar_color_anchor_id",
+                        BasicStyle.Defaults.STATUS_BAR_COLOR_ANCHOR_ID
+                    )
+                    SuperArrow(
                         title = stringResource(R.string.item_base_statusbar_color_anchor_id),
-                        inputType = InputType.STRING,
-                        leftAction = {
+                        startAction = {
                             IconActions(painterResource(R.drawable.ic_locationon))
+                        },
+                        summary = colorAnchorId.value,
+                        onClick = {
+                            context.startActivity(
+                                Intent(context, StatusBarColorAnchorViewTreeActivity::class.java)
+                            )
                         },
                         enabled = rememberBooleanPreference(
                             preferences,

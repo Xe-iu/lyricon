@@ -161,6 +161,7 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
 
                     view.setSong(null)
                     view.setPlaying(false)
+                    view.setText(null)
                     controller.updateLyricStyle(LyricPrefs.getLyricStyle())
                     view.updateVisibility()
 
@@ -177,6 +178,9 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
                 MSG_SONG_CHANGED -> {
                     val song = msg.obj as? Song
                     view.setSong(song)
+                    if (song != null && !isPlaying) {
+                        view.setPlaying(true)
+                    }
                     view.logoView.apply {
                         coverMinTimestamp = System.currentTimeMillis()
                         strategy?.updateContent()

@@ -61,6 +61,10 @@
             android:label="@string/activity_anchor" />
 
         <activity
+            android:name=".activity.lyric.StatusBarColorAnchorViewTreeActivity"
+            android:label="@string/activity_statusbar_color_anchor" />
+
+        <activity
             android:name=".activity.lyric.ViewRulesTreeActivity"
             android:label="@string/activity_view_rules" />
 

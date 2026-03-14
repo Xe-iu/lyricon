@@ -149,6 +149,7 @@
     <string name="option_color_source_anchor">Anchor view color</string>
     <string name="option_color_source_custom_anchor">Custom anchor view color</string>
     <string name="item_base_statusbar_color_anchor_id">Custom anchor ID</string>
+    <string name="activity_statusbar_color_anchor">Color monitor anchor</string>
     <string name="item_base_oled_shift_enable">OLED anti-burn shift</string>
     <string name="item_base_oled_shift_mode">Shift mode</string>
     <string name="item_base_oled_shift_range">Shift range</string>
