@@ -4,6 +4,7 @@ package io.github.proify.lyricon.xposed.systemui.util
 
 import com.highcapable.yukihookapi.hook.log.YLog
 import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -17,6 +18,8 @@ object StatusBarDisableHooker {
 
     // 状态标志位定义
     private const val FLAG_DISABLE_SYSTEM_INFO = 0x00800000
+    private const val TARGET_CLASS =
+        "com.android.systemui.statusbar.phone.fragment.CollapsedStatusBarFragment"
 
     private val listeners = CopyOnWriteArrayList<OnStatusBarDisableListener>()
 
@@ -38,6 +41,44 @@ object StatusBarDisableHooker {
 
     fun inject(appClassLoader: ClassLoader) {
         try {
+            val targetClass = XposedHelpers.findClass(TARGET_CLASS, appClassLoader)
+            val hook = object : XC_MethodHook() {
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    val args = param.args ?: return
+                    val state1 = args.filterIsInstance<Int>().getOrNull(1) ?: return
+                    val animate = args.filterIsInstance<Boolean>().lastOrNull() ?: false
+
+                    val shouldHide = (state1 and FLAG_DISABLE_SYSTEM_INFO != 0)
+
+                    listeners.forEach {
+                        try {
+                            it.onDisableStateChanged(shouldHide, animate)
+                        } catch (e: Exception) {
+                            YLog.error("$TAG -> 鍒嗗彂鐩戝惉澶辫触: ${e.message}")
+                        }
+                    }
+                }
+            }
+
+            val methods = targetClass.declaredMethods
+                .filter { method ->
+                    method.name == "disable" &&
+                        method.parameterTypes.any { type -> type == Int::class.javaPrimitiveType }
+                }
+
+            if (methods.isEmpty()) {
+                YLog.error("$TAG -> No disable methods found in $TARGET_CLASS")
+            } else {
+                methods.forEach { method ->
+                    try {
+                        XposedBridge.hookMethod(method, hook)
+                        YLog.info("$TAG -> Hooked: ${method.name}(${method.parameterTypes.joinToString()})")
+                    } catch (e: Throwable) {
+                        YLog.error("$TAG -> Hook method failed: ${e.message}")
+                    }
+                }
+            }
+            return
             XposedHelpers.findAndHookMethod(
                 "com.android.systemui.statusbar.phone.fragment.CollapsedStatusBarFragment",
                 appClassLoader,
