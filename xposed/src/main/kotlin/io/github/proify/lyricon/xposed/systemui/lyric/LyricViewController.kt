@@ -37,8 +37,11 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
     private const val MSG_TRANSLATION_TOGGLE = 7
     private const val MSG_SHOW_ROMA = 8
     private const val MSG_SONG_TRANSLATED = 9
+    private const val MSG_PLAYBACK_STATE_DELAYED = 10
 
     private const val UPDATE_INTERVAL_MS = 1000L / 60L
+    private const val PLAYBACK_STALE_MS = 2500L
+    private const val PLAYBACK_STOP_DELAY_MS = 1200L
 
     @Volatile
     var isPlaying: Boolean = false
@@ -56,6 +59,11 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
 
     private var lastPostTime = 0L
     private var songVersion: Long = 0L
+    private var lastPosition: Long = 0L
+    private var lastPositionUpdateMs: Long = 0L
+
+    fun getLastPositionSnapshot(): Long? =
+        if (lastPositionUpdateMs > 0L) lastPosition else null
 
     init {
         OplusCapsuleHooker.registerListener(this)
@@ -80,13 +88,21 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
         if (DEBUG) YLog.debug(tag = TAG, msg = "onPlaybackStateChanged: $isPlaying")
 
         this.isPlaying = isPlaying
-        uiHandler.obtainMessage(MSG_PLAYBACK_STATE, if (isPlaying) 1 else 0, 0).sendToTarget()
+        if (isPlaying) {
+            uiHandler.removeMessages(MSG_PLAYBACK_STATE_DELAYED)
+            uiHandler.obtainMessage(MSG_PLAYBACK_STATE, 1, 0).sendToTarget()
+        } else {
+            uiHandler.removeMessages(MSG_PLAYBACK_STATE_DELAYED)
+            uiHandler.sendEmptyMessageDelayed(MSG_PLAYBACK_STATE_DELAYED, PLAYBACK_STOP_DELAY_MS)
+        }
     }
 
     override fun onPositionChanged(position: Long) {
         // if (DEBUG) YLog.debug(tag = TAG, msg = "onPositionChanged: $position")
 
         val now = SystemClock.uptimeMillis()
+        lastPosition = position
+        lastPositionUpdateMs = now
 
         // 移除队列中旧的进度消息，确保合并
         uiHandler.removeMessages(MSG_POSITION)
@@ -154,6 +170,7 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
             val view = controller.lyricView
             when (msg.what) {
                 MSG_PROVIDER_CHANGED -> {
+                    uiHandler.removeMessages(MSG_PLAYBACK_STATE_DELAYED)
                     val provider = msg.obj as? ProviderInfo
                     this.providerInfo = provider
                     activePackage = providerInfo?.playerPackageName.orEmpty()
@@ -181,12 +198,28 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
                     if (song != null && !isPlaying) {
                         view.setPlaying(true)
                     }
+                    if (song != null && lastPositionUpdateMs > 0L) {
+                        view.setPosition(lastPosition)
+                    }
                     view.logoView.apply {
                         coverMinTimestamp = System.currentTimeMillis()
                         strategy?.updateContent()
                     }
                 }
-                MSG_PLAYBACK_STATE -> view.setPlaying(msg.arg1 == 1)
+                MSG_PLAYBACK_STATE -> {
+                    val playing = msg.arg1 == 1
+                    view.setPlaying(playing)
+                    if (playing && lastPositionUpdateMs > 0L) {
+                        view.setPosition(lastPosition)
+                    }
+                }
+                MSG_PLAYBACK_STATE_DELAYED -> {
+                    val now = SystemClock.uptimeMillis()
+                    val stale = now - lastPositionUpdateMs > PLAYBACK_STALE_MS
+                    if (stale) {
+                        view.setPlaying(false)
+                    }
+                }
                 MSG_POSITION -> {
                     val pos = (msg.arg1.toLong() shl 32) or (msg.arg2.toLong() and 0xFFFFFFFFL)
                     view.setPosition(pos)

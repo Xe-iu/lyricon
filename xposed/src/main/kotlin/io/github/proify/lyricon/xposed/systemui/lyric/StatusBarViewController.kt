@@ -376,6 +376,9 @@ class StatusBarViewController(
     override fun onScreenUnlocked() {
         lyricView.updateVisibility()
         lyricView.isSleepMode = false
+        if (LyricViewController.isPlaying && lyricView.isVisible) {
+            LyricViewController.getLastPositionSnapshot()?.let { lyricView.setPosition(it) }
+        }
     }
 
     fun onDisableStateChanged(shouldHide: Boolean) {
