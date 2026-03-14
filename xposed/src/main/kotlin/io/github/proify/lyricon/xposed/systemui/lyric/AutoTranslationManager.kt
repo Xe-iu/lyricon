@@ -148,7 +148,7 @@ object AutoTranslationManager {
         model: String,
         targetLanguage: String,
         text: String
-    ): ResponseResult? {
+    ): String? {
         ensureCacheLoaded()
         val key = buildCacheKey(provider, model, targetLanguage, text)
         synchronized(lock) {
@@ -660,7 +660,7 @@ object AutoTranslationManager {
         body: String,
         headers: Map<String, String>,
         logTag: String
-    ): String? {
+    ): ResponseResult? {
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             connectTimeout = 15_000
