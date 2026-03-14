@@ -21,7 +21,7 @@ fun updateRemoteLyricStyle() {
     }
     Log.d(LyriconApp.TAG, "updateRemoteLyricStyle called from ${getCallSourceMethod()}")
     runCatching {
-        val snapshot = LyricPrefs.buildSettingsSnapshot()
+        val snapshot = LyricPrefs.refreshSnapshotFromPrefs()
         val payload = json.safeEncode(snapshot).toByteArray(Charsets.UTF_8).deflate()
         systemUIChannel.put(AppBridgeConstants.REQUEST_SYNC_SETTINGS_SNAPSHOT, payload)
     }.onFailure {

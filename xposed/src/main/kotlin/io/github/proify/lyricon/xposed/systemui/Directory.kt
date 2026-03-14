@@ -29,9 +29,4 @@ object Directory {
     }
 
     fun getPackageDataDir(packageName: String): File = File(packageDir, packageName)
-
-    fun getSettingsSnapshotFile(): File {
-        if (!moduleDataDir.exists()) moduleDataDir.mkdirs()
-        return File(moduleDataDir, "settings_snapshot.json.deflate")
-    }
 }

@@ -10,6 +10,7 @@ import android.util.Log
 import io.github.proify.android.extensions.json
 import io.github.proify.lyricon.lyric.model.Song
 import io.github.proify.lyricon.lyric.model.extensions.deepCopy
+import io.github.proify.lyricon.lyric.style.TranslationDefaults
 import io.github.proify.lyricon.xposed.systemui.Directory
 import io.github.proify.lyricon.xposed.systemui.util.LyricPrefs
 import kotlinx.serialization.Serializable
@@ -327,11 +328,11 @@ object AutoTranslationManager {
     ): List<String>? {
         if (texts.isEmpty()) return emptyList()
         return when (settings.provider) {
-            LyricPrefs.TRANSLATION_PROVIDER_GEMINI -> requestGeminiTranslation(settings, texts)
-            LyricPrefs.TRANSLATION_PROVIDER_CLAUDE -> requestClaudeTranslation(settings, texts)
-            LyricPrefs.TRANSLATION_PROVIDER_OPENAI,
-            LyricPrefs.TRANSLATION_PROVIDER_DEEPSEEK,
-            LyricPrefs.TRANSLATION_PROVIDER_QWEN -> requestOpenAiCompatibleTranslation(settings, texts)
+            TranslationDefaults.PROVIDER_GEMINI -> requestGeminiTranslation(settings, texts)
+            TranslationDefaults.PROVIDER_CLAUDE -> requestClaudeTranslation(settings, texts)
+            TranslationDefaults.PROVIDER_OPENAI,
+            TranslationDefaults.PROVIDER_DEEPSEEK,
+            TranslationDefaults.PROVIDER_QWEN -> requestOpenAiCompatibleTranslation(settings, texts)
             else -> null
         }
     }

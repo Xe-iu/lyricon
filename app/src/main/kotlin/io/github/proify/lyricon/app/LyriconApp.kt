@@ -16,6 +16,7 @@ import com.highcapable.yukihookapi.hook.factory.dataChannel
 import com.highcapable.yukihookapi.hook.xposed.application.ModuleApplication
 import com.highcapable.yukihookapi.hook.xposed.channel.YukiHookDataChannel
 import io.github.proify.lyricon.app.util.AppLangUtils
+import io.github.proify.lyricon.app.util.LyricPrefs
 import io.github.proify.lyricon.common.PackageNames
 import io.github.proify.lyricon.common.util.safe
 
@@ -40,6 +41,12 @@ class LyriconApp : ModuleApplication() {
                     ", versionName: ${Executor.versionName}" +
                     ", versionCode: ${Executor.versionCode}"
         )
+        runCatching {
+            LyricPrefs.syncPrefsFromJsonOrInit()
+            updateRemoteLyricStyle()
+        }.onFailure {
+            Log.w(TAG, "sync settings on app start failed", it)
+        }
     }
 
     override fun getSharedPreferences(name: String?, mode: Int): SharedPreferences =

@@ -11,6 +11,7 @@ import io.github.proify.android.extensions.fromJson
 import io.github.proify.android.extensions.getWorldReadableSharedPreferences
 import io.github.proify.android.extensions.json
 import io.github.proify.android.extensions.safeDecode
+import io.github.proify.android.extensions.safeEncode
 import io.github.proify.android.extensions.toJson
 import io.github.proify.lyricon.app.LyriconApp
 import io.github.proify.lyricon.app.bridge.AppBridge.LyricStylePrefs
@@ -21,6 +22,7 @@ import io.github.proify.lyricon.lyric.style.PackageStyle
 import io.github.proify.lyricon.lyric.style.TranslationConfig
 import io.github.proify.lyricon.lyric.style.TranslationDefaults
 import io.github.proify.lyricon.lyric.style.VisibilityRule
+import java.io.File
 
 /**
  * 歌词样式偏好管理工具类。
@@ -106,6 +108,9 @@ object LyricPrefs {
     private const val KEY_TRANSLATION_IGNORE_REGEX = "lyric_translation_ignore_regex"
     private const val KEY_TRANSLATION_CUSTOM_PROMPT = "lyric_translation_custom_prompt"
 
+    private const val SNAPSHOT_DIR = "lyricon"
+    private const val SNAPSHOT_FILE = "settings_snapshot.json"
+
     fun buildSettingsSnapshot(): LyricSettingsSnapshot {
         val baseStyle = BasicStyle().apply { load(basicStylePrefs) }
         val enabledPackages = getEnabledPackageNames()
@@ -134,6 +139,87 @@ object LyricPrefs {
             enabledPackages = enabledPackages,
             translationConfigs = translationConfigs
         )
+    }
+
+    fun persistSettingsSnapshot(snapshot: LyricSettingsSnapshot) {
+        val file = getSnapshotFile()
+        val jsonText = json.safeEncode(snapshot)
+        file.writeText(jsonText, Charsets.UTF_8)
+    }
+
+    fun loadSettingsSnapshot(): LyricSettingsSnapshot? {
+        val file = getSnapshotFile()
+        if (!file.exists()) return null
+        return runCatching {
+            val jsonText = file.readText(Charsets.UTF_8)
+            json.safeDecode<LyricSettingsSnapshot>(jsonText)
+        }.getOrNull()
+    }
+
+    fun getEffectiveSettingsSnapshot(): LyricSettingsSnapshot {
+        return loadSettingsSnapshot() ?: buildSettingsSnapshot().also {
+            persistSettingsSnapshot(it)
+        }
+    }
+
+    fun syncPrefsFromJsonOrInit(): LyricSettingsSnapshot {
+        val snapshot = getEffectiveSettingsSnapshot()
+        applySnapshotToPrefs(snapshot)
+        return snapshot
+    }
+
+    fun refreshSnapshotFromPrefs(): LyricSettingsSnapshot {
+        val snapshot = buildSettingsSnapshot()
+        persistSettingsSnapshot(snapshot)
+        return snapshot
+    }
+
+    private fun getSnapshotFile(): File {
+        val dir = File(LyriconApp.instance.filesDir, SNAPSHOT_DIR)
+        if (!dir.exists()) dir.mkdirs()
+        return File(dir, SNAPSHOT_FILE)
+    }
+
+    fun applySnapshotToPrefs(snapshot: LyricSettingsSnapshot) {
+        basicStylePrefs.editCommit {
+            clear()
+            snapshot.baseStyle.write(this)
+        }
+
+        val configuredPackages =
+            snapshot.packageStyles.keys
+                .filter { it != DEFAULT_PACKAGE_NAME }
+                .toSet()
+        packageStyleManager.editCommit {
+            putStringSet(KEY_ENABLED_PACKAGES, snapshot.enabledPackages)
+            putString(KEY_CONFIGURED_PACKAGES, configuredPackages.toJson())
+        }
+
+        snapshot.packageStyles.forEach { (packageName, style) ->
+            val prefs = getSharedPreferences(getPackagePrefName(packageName))
+            val translationConfig =
+                snapshot.translationConfigs[packageName] ?: TranslationConfig()
+            prefs.editCommit {
+                clear()
+                style.write(this)
+                writeTranslationConfig(this, translationConfig)
+            }
+        }
+    }
+
+    private fun writeTranslationConfig(
+        editor: SharedPreferences.Editor,
+        config: TranslationConfig
+    ) {
+        editor.putBoolean(KEY_TRANSLATION_ENABLED, config.enabled)
+        editor.putString(KEY_TRANSLATION_PROVIDER, config.provider)
+        editor.putString(KEY_TRANSLATION_TARGET_LANGUAGE, config.targetLanguage)
+        editor.putString(KEY_TRANSLATION_OPENAI_API_KEY, config.apiKey)
+        editor.putString(KEY_TRANSLATION_OPENAI_MODEL, config.model)
+        editor.putString(KEY_TRANSLATION_OPENAI_BASE_URL, config.baseUrl)
+        editor.putString(KEY_TRANSLATION_CACHE_SIZE, config.maxCacheSize.toString())
+        editor.putString(KEY_TRANSLATION_IGNORE_REGEX, config.ignoreRegex)
+        editor.putString(KEY_TRANSLATION_CUSTOM_PROMPT, config.customPrompt)
     }
 
     private fun readTranslationConfig(prefs: SharedPreferences): TranslationConfig {
