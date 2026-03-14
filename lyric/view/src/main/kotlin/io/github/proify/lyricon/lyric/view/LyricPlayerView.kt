@@ -25,6 +25,7 @@ import io.github.proify.lyricon.lyric.model.interfaces.IRichLyricLine
 import io.github.proify.lyricon.lyric.model.lyricMetadataOf
 import io.github.proify.lyricon.lyric.view.line.LyricLineView
 import io.github.proify.lyricon.lyric.view.yoyo.YoYoPresets
+import io.github.proify.lyricon.lyric.view.yoyo.YoYoAnimation
 import io.github.proify.lyricon.lyric.view.yoyo.animateUpdate
 import java.util.concurrent.CopyOnWriteArraySet
 
@@ -46,6 +47,7 @@ open class LyricPlayerView(
     private var isEnableRelativeProgress = false
     private var isEnableRelativeProgressHighlight = false
     private var isEnteringInterludeMode = false
+    private var animationsEnabled = true
 
     // data models
     private var lineModelList: List<RichLyricLineModel>? = null
@@ -165,7 +167,7 @@ open class LyricPlayerView(
 
             val line = buildLine(value)
 
-            if (styleConfig.enableAnim && preset != null) {
+            if (canAnimate() && preset != null) {
                 animateUpdate(preset) {
                     textRecycleLineView.line = line
                     textRecycleLineView.post { textRecycleLineView.tryStartMarquee() }
@@ -326,7 +328,7 @@ open class LyricPlayerView(
                 val preset by lazy {
                     YoYoPresets.getByIds(styleConfig.animOutId, styleConfig.animInId)
                 }
-                if (styleConfig.enableAnim && preset != null) {
+                if (canAnimate() && preset != null) {
                     activeLyricLines[0] = newLine
                     recycleView.beginAnimationTransition()
                     recycleView.line = newLine
@@ -375,6 +377,14 @@ open class LyricPlayerView(
 
     fun updateViewsVisibility() {
         doUpdateViewsVisibility()
+    }
+
+    fun setAnimationsEnabled(enabled: Boolean) {
+        if (animationsEnabled == enabled) return
+        animationsEnabled = enabled
+        if (!enabled) {
+            cancelAllAnimations()
+        }
     }
 
     /**
@@ -641,6 +651,22 @@ open class LyricPlayerView(
         super.onAttachedToWindow()
         Log.d(TAG, "onAttachedToWindow")
         viewTreeObserver.addOnGlobalLayoutListener(viewTreeObserverListener)
+    }
+
+    private fun canAnimate(): Boolean {
+        if (!animationsEnabled) return false
+        if (!styleConfig.enableAnim) return false
+        if (!isAttachedToWindow || !isShown) return false
+        return true
+    }
+
+    private fun cancelAllAnimations() {
+        YoYoAnimation.cancelAnimation(textRecycleLineView)
+        forEach { view ->
+            if (view is RichLyricLineView) {
+                YoYoAnimation.cancelAnimation(view)
+            }
+        }
     }
 
     interface LyricCountChangeListener {

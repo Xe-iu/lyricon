@@ -77,9 +77,11 @@ class StatusBarLyric(
             Log.d(TAG, "休眠模式：$value")
             if (value) {
                 pendingSleepData = PendingData()
+                textView.setAnimationsEnabled(false)
             } else {
                 pendingSleepData?.let { seekTo(it.position) }
                 pendingSleepData = null
+                textView.setAnimationsEnabled(true)
             }
         }
 
