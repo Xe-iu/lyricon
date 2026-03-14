@@ -15,27 +15,21 @@ import kotlinx.serialization.Serializable
 @Parcelize
 data class AnimStyle(
     var enable: Boolean = Defaults.ENABLE,
-    var enterId: String = Defaults.ENTER_ID,
-    var exitId: String = Defaults.EXIT_ID
+    var id: String = Defaults.ID
 ) : AbstractStyle(), Parcelable {
 
     object Defaults {
         const val ENABLE: Boolean = true
-        const val ENTER_ID: String = "in_fade_in_up"
-        const val EXIT_ID: String = "out_fade_out_up"
+        const val ID: String = "default"
     }
 
     override fun onLoad(preferences: SharedPreferences) {
         enable = preferences.getBoolean("lyric_style_anim_enable", Defaults.ENABLE)
-        enterId =
-            preferences.getString("lyric_style_anim_enter_id", Defaults.ENTER_ID) ?: Defaults.ENTER_ID
-        exitId =
-            preferences.getString("lyric_style_anim_exit_id", Defaults.EXIT_ID) ?: Defaults.EXIT_ID
+        id = preferences.getString("lyric_style_anim_id", Defaults.ID) ?: Defaults.ID
     }
 
     override fun onWrite(editor: SharedPreferences.Editor) {
         editor.putBoolean("lyric_style_anim_enable", enable)
-        editor.putString("lyric_style_anim_enter_id", enterId)
-        editor.putString("lyric_style_anim_exit_id", exitId)
+        editor.putString("lyric_style_anim_id", id)
     }
 }

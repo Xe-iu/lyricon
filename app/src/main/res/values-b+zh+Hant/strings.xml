@@ -68,8 +68,6 @@
     <string name="tab_style_text">文字</string>
     <string name="tab_style_icon">圖示</string>
     <string name="tab_style_anim">動畫</string>
-    <string name="item_anim_enter">入場動畫</string>
-    <string name="item_anim_exit">退場動畫</string>
     <string name="item_text_size">大小</string>
     <string name="item_text_margins">邊距</string>
     <string name="item_text_paddings">內距</string>
@@ -147,9 +145,6 @@
     <string name="item_base_statusbar_color_source">顏色監聽來源</string>
     <string name="option_color_source_clock">時鐘顏色</string>
     <string name="option_color_source_anchor">錨點視圖顏色</string>
-    <string name="option_color_source_custom_anchor">自訂錨點視圖顏色</string>
-    <string name="item_base_statusbar_color_anchor_id">自訂錨點 ID</string>
-    <string name="activity_statusbar_color_anchor">顏色監聽錨點</string>
     <string name="item_base_oled_shift_enable">OLED 防燒屏漂移</string>
     <string name="item_base_oled_shift_mode">漂移模式</string>
     <string name="item_base_oled_shift_range">漂移範圍</string>

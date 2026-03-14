@@ -8,9 +8,6 @@ import com.daimajia.androidanimations.library.Techniques
 import io.github.proify.lyricon.lyric.view.yoyo.anim.MyTechniques
 
 object YoYoPresets {
-    const val DEFAULT_OUT_ID: String = "out_fade_out_up"
-    const val DEFAULT_IN_ID: String = "in_fade_in_up"
-    private val UNIFIED_INTERPOLATOR: Interpolator = FastOutSlowInInterpolator()
 
     private fun pair(
         outTech: Any,
@@ -31,30 +28,6 @@ object YoYoPresets {
             return AnimConfig(outTech, outDur, outInterp) to AnimConfig(inTech, inDur, inInterp)
         }
         throw IllegalArgumentException("Invalid animation type")
-    }
-
-    private fun out(
-        tech: Any,
-        duration: Long,
-        interpolator: Interpolator
-    ): AnimConfig {
-        return when (tech) {
-            is Techniques -> AnimConfig(tech, duration, interpolator)
-            is MyTechniques -> AnimConfig(tech, duration, interpolator)
-            else -> throw IllegalArgumentException("Invalid animation type")
-        }
-    }
-
-    private fun `in`(
-        tech: Any,
-        duration: Long,
-        interpolator: Interpolator
-    ): AnimConfig {
-        return when (tech) {
-            is Techniques -> AnimConfig(tech, duration, interpolator)
-            is MyTechniques -> AnimConfig(tech, duration, interpolator)
-            else -> throw IllegalArgumentException("Invalid animation type")
-        }
     }
 
     // region Fade Animations
@@ -254,54 +227,4 @@ object YoYoPresets {
     }
 
     fun getById(id: String?): Pair<AnimConfig, AnimConfig>? = registry[id]?.invoke()
-
-    val outRegistry: Map<String, AnimConfig> by lazy {
-        mapOf(
-            DEFAULT_OUT_ID to out(Techniques.FadeOutUp, 300L, FastOutLinearInInterpolator()),
-            "out_fade_out" to out(Techniques.FadeOut, 300L, FastOutLinearInInterpolator()),
-            "out_fade_out_left" to out(Techniques.FadeOutLeft, 300L, FastOutLinearInInterpolator()),
-            "out_fade_out_right" to out(Techniques.FadeOutRight, 300L, FastOutLinearInInterpolator()),
-            "out_fade_out_down" to out(Techniques.FadeOutDown, 300L, FastOutLinearInInterpolator()),
-            "out_slide_out_left" to out(Techniques.SlideOutLeft, 300L, FastOutLinearInInterpolator()),
-            "out_slide_out_right" to out(Techniques.SlideOutRight, 300L, FastOutLinearInInterpolator()),
-            "out_flip_out_x" to out(Techniques.FlipOutX, 300L, FastOutLinearInInterpolator()),
-            "out_flip_out_y" to out(Techniques.FlipOutY, 300L, FastOutLinearInInterpolator()),
-            "out_rotate_out" to out(Techniques.RotateOut, 200L, FastOutLinearInInterpolator()),
-            "out_zoom_out" to out(Techniques.ZoomOut, 200L, FastOutLinearInInterpolator())
-        )
-    }
-
-    val inRegistry: Map<String, AnimConfig> by lazy {
-        mapOf(
-            DEFAULT_IN_ID to `in`(Techniques.FadeInUp, 450L, FastOutSlowInInterpolator()),
-            "in_fade_in" to `in`(Techniques.FadeIn, 300L, FastOutSlowInInterpolator()),
-            "in_fade_in_left" to `in`(Techniques.FadeInLeft, 450L, OvershootInterpolator(1.5f)),
-            "in_fade_in_right" to `in`(Techniques.FadeInRight, 450L, OvershootInterpolator(1.5f)),
-            "in_fade_in_down" to `in`(Techniques.FadeInDown, 450L, FastOutSlowInInterpolator()),
-            "in_slide_in_left" to `in`(Techniques.SlideInLeft, 450L, OvershootInterpolator(1.5f)),
-            "in_slide_in_right" to `in`(Techniques.SlideInRight, 450L, OvershootInterpolator(1.5f)),
-            "in_flip_in_x" to `in`(Techniques.FlipInX, 450L, FastOutSlowInInterpolator()),
-            "in_flip_in_y" to `in`(Techniques.FlipInY, 450L, FastOutSlowInInterpolator()),
-            "in_rotate_in" to `in`(Techniques.RotateIn, 600L, OvershootInterpolator(1.0f)),
-            "in_zoom_in" to `in`(Techniques.ZoomIn, 400L, FastOutSlowInInterpolator()),
-            "in_zoom_in_left" to `in`(Techniques.ZoomInLeft, 600L, FastOutSlowInInterpolator()),
-            "in_zoom_in_right" to `in`(Techniques.ZoomInRight, 600L, FastOutSlowInInterpolator()),
-            "in_landing_soft" to `in`(MyTechniques.LandingSoft, 700L, FastOutSlowInInterpolator())
-        )
-    }
-
-    fun getOutById(id: String?): AnimConfig? =
-        outRegistry[id] ?: outRegistry[DEFAULT_OUT_ID]
-
-    fun getInById(id: String?): AnimConfig? =
-        inRegistry[id] ?: inRegistry[DEFAULT_IN_ID]
-
-    fun getByIds(outId: String?, inId: String?): Pair<AnimConfig, AnimConfig>? {
-        val out = getOutById(outId)
-        val `in` = getInById(inId)
-        return if (out != null && `in` != null) {
-            out.copy(interpolator = UNIFIED_INTERPOLATOR) to
-                    `in`.copy(interpolator = UNIFIED_INTERPOLATOR)
-        } else null
-    }
 }

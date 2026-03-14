@@ -233,13 +233,11 @@ class BasicLyricStyleActivity : AbstractLyricActivity() {
                     )
                     val sourceKeys = listOf(
                         BasicStyle.COLOR_SOURCE_CLOCK,
-                        BasicStyle.COLOR_SOURCE_ANCHOR,
-                        BasicStyle.COLOR_SOURCE_CUSTOM_ANCHOR
+                        BasicStyle.COLOR_SOURCE_ANCHOR
                     )
                     val sourceOptions = listOf(
                         SpinnerEntry(title = stringResource(R.string.option_color_source_clock)),
-                        SpinnerEntry(title = stringResource(R.string.option_color_source_anchor)),
-                        SpinnerEntry(title = stringResource(R.string.option_color_source_custom_anchor))
+                        SpinnerEntry(title = stringResource(R.string.option_color_source_anchor))
                     )
                     val sourceIndex = sourceKeys.indexOf(colorSource.value).coerceAtLeast(0)
                     SuperSpinner(
@@ -255,29 +253,6 @@ class BasicLyricStyleActivity : AbstractLyricActivity() {
                             "lyric_style_base_listen_statusbar_color",
                             BasicStyle.Defaults.LISTEN_STATUS_BAR_COLOR
                         ).value
-                    )
-
-                    val colorAnchorId = rememberStringPreference(
-                        preferences,
-                        "lyric_style_base_statusbar_color_anchor_id",
-                        BasicStyle.Defaults.STATUS_BAR_COLOR_ANCHOR_ID
-                    )
-                    SuperArrow(
-                        title = stringResource(R.string.item_base_statusbar_color_anchor_id),
-                        startAction = {
-                            IconActions(painterResource(R.drawable.ic_locationon))
-                        },
-                        summary = colorAnchorId.value,
-                        onClick = {
-                            context.startActivity(
-                                Intent(context, StatusBarColorAnchorViewTreeActivity::class.java)
-                            )
-                        },
-                        enabled = rememberBooleanPreference(
-                            preferences,
-                            "lyric_style_base_listen_statusbar_color",
-                            BasicStyle.Defaults.LISTEN_STATUS_BAR_COLOR
-                        ).value && colorSource.value == BasicStyle.COLOR_SOURCE_CUSTOM_ANCHOR
                     )
 
                     HideWhenNoLyric()

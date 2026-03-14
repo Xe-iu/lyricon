@@ -130,8 +130,7 @@ class SuperText(context: Context) : LyricPlayerView(context) {
             fadingEdgeLength = textStyle.fadingEdgeLength.coerceAtLeast(0).dp
             placeholderFormat = textStyle.placeholderFormat ?: TextStyle.Defaults.PLACEHOLDER_FORMAT
             enableAnim = style.packageStyle.anim.enable
-            animInId = style.packageStyle.anim.enterId
-            animOutId = style.packageStyle.anim.exitId
+            animId = style.packageStyle.anim.id
         }
 
         setStyle(config)

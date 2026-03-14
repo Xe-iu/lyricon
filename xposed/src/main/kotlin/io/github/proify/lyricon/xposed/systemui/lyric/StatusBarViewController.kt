@@ -238,8 +238,6 @@ class StatusBarViewController(
 
         val target = when (colorMonitorSource) {
             BasicStyle.COLOR_SOURCE_ANCHOR -> findAnchorTextView(basicStyle.anchor)
-            BasicStyle.COLOR_SOURCE_CUSTOM_ANCHOR ->
-                findAnchorTextView(basicStyle.statusBarColorAnchorId)
             else -> getClockView() as? TextView
         } ?: getClockView() as? TextView ?: return
 
