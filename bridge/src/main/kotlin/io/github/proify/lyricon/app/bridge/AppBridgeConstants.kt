@@ -8,6 +8,7 @@ package io.github.proify.lyricon.app.bridge
 
 object AppBridgeConstants {
     const val REQUEST_UPDATE_LYRIC_STYLE: String = "request_update_lyric_style"
+    const val REQUEST_SYNC_SETTINGS_SNAPSHOT: String = "request_sync_settings_snapshot"
     const val REQUEST_HIGHLIGHT_VIEW: String = "request_highlight_view"
 
     const val REQUEST_CHECK_SAFE_MODE: String = "request_check_safe_mode"

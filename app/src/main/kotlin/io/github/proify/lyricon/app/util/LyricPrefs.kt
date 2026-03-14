@@ -15,6 +15,11 @@ import io.github.proify.android.extensions.toJson
 import io.github.proify.lyricon.app.LyriconApp
 import io.github.proify.lyricon.app.bridge.AppBridge.LyricStylePrefs
 import io.github.proify.lyricon.app.bridge.AppBridge.LyricStylePrefs.KEY_ENABLED_PACKAGES
+import io.github.proify.lyricon.lyric.style.BasicStyle
+import io.github.proify.lyricon.lyric.style.LyricSettingsSnapshot
+import io.github.proify.lyricon.lyric.style.PackageStyle
+import io.github.proify.lyricon.lyric.style.TranslationConfig
+import io.github.proify.lyricon.lyric.style.TranslationDefaults
 import io.github.proify.lyricon.lyric.style.VisibilityRule
 
 /**
@@ -89,5 +94,85 @@ object LyricPrefs {
     fun getViewVisibilityRule(): List<VisibilityRule> {
         val json = basicStylePrefs.getString("lyric_style_base_visibility_rules", null)
         return json?.fromJson<List<VisibilityRule>>() ?: emptyList()
+    }
+
+    private const val KEY_TRANSLATION_ENABLED = "lyric_translation_enabled"
+    private const val KEY_TRANSLATION_PROVIDER = "lyric_translation_api_provider"
+    private const val KEY_TRANSLATION_TARGET_LANGUAGE = "lyric_translation_target_language"
+    private const val KEY_TRANSLATION_OPENAI_API_KEY = "lyric_translation_openai_api_key"
+    private const val KEY_TRANSLATION_OPENAI_MODEL = "lyric_translation_openai_model"
+    private const val KEY_TRANSLATION_OPENAI_BASE_URL = "lyric_translation_openai_base_url"
+    private const val KEY_TRANSLATION_CACHE_SIZE = "lyric_translation_cache_size"
+    private const val KEY_TRANSLATION_IGNORE_REGEX = "lyric_translation_ignore_regex"
+    private const val KEY_TRANSLATION_CUSTOM_PROMPT = "lyric_translation_custom_prompt"
+
+    fun buildSettingsSnapshot(): LyricSettingsSnapshot {
+        val baseStyle = BasicStyle().apply { load(basicStylePrefs) }
+        val enabledPackages = getEnabledPackageNames()
+        val configuredPackages =
+            getConfiguredPackageNames()
+                .toMutableSet()
+                .apply {
+                    add(DEFAULT_PACKAGE_NAME)
+                    addAll(enabledPackages)
+                }
+
+        val packageStyles = configuredPackages.associateWith { packageName ->
+            val prefs = getSharedPreferences(getPackagePrefName(packageName))
+            PackageStyle().apply { load(prefs) }
+        }
+
+        val translationConfigs = configuredPackages.associateWith { packageName ->
+            val prefs = getSharedPreferences(getPackagePrefName(packageName))
+            readTranslationConfig(prefs)
+        }
+
+        return LyricSettingsSnapshot(
+            defaultPackageName = DEFAULT_PACKAGE_NAME,
+            baseStyle = baseStyle,
+            packageStyles = packageStyles,
+            enabledPackages = enabledPackages,
+            translationConfigs = translationConfigs
+        )
+    }
+
+    private fun readTranslationConfig(prefs: SharedPreferences): TranslationConfig {
+        val provider =
+            prefs.getString(KEY_TRANSLATION_PROVIDER, TranslationDefaults.PROVIDER_OPENAI)
+                ?: TranslationDefaults.PROVIDER_OPENAI
+
+        val model =
+            prefs.getString(KEY_TRANSLATION_OPENAI_MODEL, null)
+                ?: TranslationDefaults.defaultModel(provider)
+
+        val baseUrl =
+            prefs.getString(KEY_TRANSLATION_OPENAI_BASE_URL, null)
+                ?: TranslationDefaults.defaultBaseUrl(provider)
+
+        val maxCacheSize = prefs.getString(KEY_TRANSLATION_CACHE_SIZE, null)
+            ?.toIntOrNull() ?: TranslationDefaults.DEFAULT_CACHE_SIZE
+
+        val ignoreRegex =
+            prefs.getString(KEY_TRANSLATION_IGNORE_REGEX, null)
+                ?: TranslationDefaults.DEFAULT_IGNORE_REGEX
+
+        val customPrompt =
+            prefs.getString(KEY_TRANSLATION_CUSTOM_PROMPT, null)
+                ?: io.github.proify.lyricon.common.Constants.DEFAULT_TRANSLATION_CUSTOM_PROMPT
+
+        return TranslationConfig(
+            enabled = prefs.getBoolean(KEY_TRANSLATION_ENABLED, false),
+            provider = provider,
+            targetLanguage = prefs.getString(
+                KEY_TRANSLATION_TARGET_LANGUAGE,
+                TranslationDefaults.DEFAULT_TARGET_LANGUAGE
+            ) ?: TranslationDefaults.DEFAULT_TARGET_LANGUAGE,
+            apiKey = prefs.getString(KEY_TRANSLATION_OPENAI_API_KEY, null) ?: "",
+            model = model,
+            baseUrl = baseUrl,
+            maxCacheSize = maxCacheSize,
+            ignoreRegex = ignoreRegex,
+            customPrompt = customPrompt
+        )
     }
 }

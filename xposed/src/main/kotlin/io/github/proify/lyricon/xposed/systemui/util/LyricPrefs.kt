@@ -12,8 +12,11 @@ import de.robv.android.xposed.XSharedPreferences
 import io.github.proify.lyricon.app.bridge.AppBridge
 import io.github.proify.lyricon.common.PackageNames
 import io.github.proify.lyricon.lyric.style.BasicStyle
+import io.github.proify.lyricon.lyric.style.LyricSettingsSnapshot
 import io.github.proify.lyricon.lyric.style.LyricStyle
 import io.github.proify.lyricon.lyric.style.PackageStyle
+import io.github.proify.lyricon.lyric.style.TranslationConfig
+import io.github.proify.lyricon.lyric.style.TranslationDefaults
 
 object LyricPrefs {
     data class TranslationSettings(
@@ -29,7 +32,7 @@ object LyricPrefs {
     ) {
         val isUsable: Boolean
             get() = enabled
-                    && provider in SUPPORTED_TRANSLATION_PROVIDERS
+                    && provider in TranslationDefaults.SUPPORTED_PROVIDERS
                     && apiKey.isNotBlank()
     }
 
@@ -76,6 +79,9 @@ object LyricPrefs {
 
     private val prefsCache = mutableMapOf<String, XSharedPreferences>()
     private val packageStyleCache = mutableMapOf<String, PackageStyleCache>()
+
+    @Volatile
+    private var settingsSnapshot: LyricSettingsSnapshot? = null
 
     @Volatile
     var activePackageName: String? = null
@@ -127,6 +133,15 @@ object LyricPrefs {
         }
 
     fun getActivePackageStyle(): PackageStyle {
+        settingsSnapshot?.let { snapshot ->
+            val activePackage = activePackageName
+            val defaultStyle =
+                snapshot.packageStyles[snapshot.defaultPackageName] ?: PackageStyle()
+            if (activePackage != null && snapshot.enabledPackages.contains(activePackage)) {
+                return snapshot.packageStyles[activePackage] ?: defaultStyle
+            }
+            return defaultStyle
+        }
         val pkg = activePackageName
         return if (pkg != null && isPackageEnabled(pkg)) {
             getPackageStyle(pkg)
@@ -198,6 +213,18 @@ object LyricPrefs {
     /* ---------------- lyric style ---------------- */
 
     fun getLyricStyle(packageName: String? = null): LyricStyle {
+        settingsSnapshot?.let { snapshot ->
+            val baseStyle = snapshot.baseStyle
+            if (packageName == null) {
+                return LyricStyle(baseStyle, getActivePackageStyle())
+            }
+            val defaultStyle =
+                snapshot.packageStyles[snapshot.defaultPackageName] ?: PackageStyle()
+            return LyricStyle(
+                baseStyle,
+                snapshot.packageStyles[packageName] ?: defaultStyle
+            )
+        }
         if (packageName == null) {
             return LyricStyle(baseStyle, getActivePackageStyle())
         }
@@ -227,33 +254,45 @@ object LyricPrefs {
     }
 
     fun getActiveTranslationSettings(): TranslationSettings {
+        settingsSnapshot?.let { snapshot ->
+            val activePackage = activePackageName
+            val defaultConfig =
+                snapshot.translationConfigs[snapshot.defaultPackageName] ?: TranslationConfig()
+            val config =
+                if (activePackage != null && snapshot.enabledPackages.contains(activePackage)) {
+                    snapshot.translationConfigs[activePackage] ?: defaultConfig
+                } else {
+                    defaultConfig
+                }
+            return config.toTranslationSettings()
+        }
         val activePrefs = getActivePackagePrefsForConfig().ensureLatest()
         defaultPackageStylePrefs.ensureLatest()
         val provider = readConfigStringWithFallback(
             activePrefs = activePrefs,
             key = KEY_TRANSLATION_PROVIDER,
-            fallback = TRANSLATION_PROVIDER_OPENAI
+            fallback = TranslationDefaults.PROVIDER_OPENAI
         )
 
         val model = readConfigStringWithFallback(
             activePrefs = activePrefs,
             key = KEY_TRANSLATION_OPENAI_MODEL,
-            fallback = getDefaultModel(provider)
+            fallback = TranslationDefaults.defaultModel(provider)
         )
         val baseUrl = readConfigStringWithFallback(
             activePrefs = activePrefs,
             key = KEY_TRANSLATION_OPENAI_BASE_URL,
-            fallback = getDefaultBaseUrl(provider)
+            fallback = TranslationDefaults.defaultBaseUrl(provider)
         )
 
         val maxCacheSize = runCatching {
             activePrefs.getString(KEY_TRANSLATION_CACHE_SIZE, null)?.toIntOrNull()
-        }.getOrNull() ?: DEFAULT_TRANSLATION_CACHE_SIZE
+        }.getOrNull() ?: TranslationDefaults.DEFAULT_CACHE_SIZE
 
         val ignoreRegex = readConfigStringWithFallback(
             activePrefs = activePrefs,
             key = KEY_TRANSLATION_IGNORE_REGEX,
-            fallback = DEFAULT_TRANSLATION_IGNORE_REGEX
+            fallback = TranslationDefaults.DEFAULT_IGNORE_REGEX
         )
 
         val customPrompt = readConfigStringWithFallback(
@@ -271,7 +310,7 @@ object LyricPrefs {
             targetLanguage = readConfigStringWithFallback(
                 activePrefs = activePrefs,
                 key = KEY_TRANSLATION_TARGET_LANGUAGE,
-                fallback = DEFAULT_TRANSLATION_TARGET_LANGUAGE
+                fallback = TranslationDefaults.DEFAULT_TARGET_LANGUAGE
             ),
             apiKey = readConfigStringWithFallback(
                 activePrefs = activePrefs,
@@ -304,5 +343,23 @@ object LyricPrefs {
             TRANSLATION_PROVIDER_QWEN -> DEFAULT_TRANSLATION_QWEN_BASE_URL
             else -> DEFAULT_TRANSLATION_OPENAI_BASE_URL
         }
+    }
+
+    fun updateSettingsSnapshot(snapshot: LyricSettingsSnapshot?) {
+        settingsSnapshot = snapshot
+    }
+
+    private fun TranslationConfig.toTranslationSettings(): TranslationSettings {
+        return TranslationSettings(
+            enabled = enabled,
+            provider = provider,
+            targetLanguage = targetLanguage,
+            apiKey = apiKey,
+            model = model,
+            baseUrl = baseUrl,
+            maxCacheSize = maxCacheSize,
+            ignoreRegex = ignoreRegex,
+            customPrompt = customPrompt
+        )
     }
 }

@@ -15,7 +15,9 @@ import com.highcapable.yukihookapi.hook.core.YukiMemberHookCreator
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.proify.android.extensions.deflate
+import io.github.proify.android.extensions.inflate
 import io.github.proify.android.extensions.json
+import io.github.proify.android.extensions.safeDecode
 import io.github.proify.android.extensions.safeEncode
 import io.github.proify.lyricon.app.bridge.AppBridgeConstants
 import io.github.proify.lyricon.central.BridgeCentral
@@ -119,6 +121,16 @@ object SystemUIHooker : YukiBaseHooker() {
 
     private fun initDataChannel() {
         val channel = dataChannel
+        channel.wait<ByteArray>(key = AppBridgeConstants.REQUEST_SYNC_SETTINGS_SNAPSHOT) { data ->
+            runCatching {
+                val jsonText = data.inflate().toString(Charsets.UTF_8)
+                val snapshot = json.safeDecode<io.github.proify.lyricon.lyric.style.LyricSettingsSnapshot>(jsonText)
+                LyricPrefs.updateSettingsSnapshot(snapshot)
+                StatusBarViewManager.forEach { it.updateLyricStyle(LyricPrefs.getLyricStyle()) }
+            }.onFailure {
+                YLog.error("apply settings snapshot failed", it)
+            }
+        }
         channel.wait(key = AppBridgeConstants.REQUEST_UPDATE_LYRIC_STYLE) {
             StatusBarViewManager.forEach { it.updateLyricStyle(LyricPrefs.getLyricStyle()) }
         }
