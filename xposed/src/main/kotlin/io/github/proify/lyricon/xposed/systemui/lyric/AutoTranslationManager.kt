@@ -11,6 +11,7 @@ import io.github.proify.android.extensions.json
 import io.github.proify.lyricon.lyric.model.Song
 import io.github.proify.lyricon.lyric.model.extensions.deepCopy
 import io.github.proify.lyricon.lyric.style.TranslationDefaults
+import io.github.proify.lyricon.xposed.systemui.lyric.TranslationDebugReporter
 import io.github.proify.lyricon.xposed.systemui.Directory
 import io.github.proify.lyricon.xposed.systemui.util.LyricPrefs
 import kotlinx.serialization.Serializable
@@ -197,19 +198,47 @@ object AutoTranslationManager {
         callback: (Song?) -> Unit
     ) {
         if (!settings.isUsable || song?.lyrics.isNullOrEmpty()) {
+            TranslationDebugReporter.updateState(
+                state = "Skipped",
+                detail = if (!settings.isUsable) {
+                    "Settings unusable"
+                } else {
+                    "No lyrics"
+                },
+                song = song,
+                settings = settings
+            )
             Log.d(TAG, "translateSongIfNeededAsync: settings unusable or no lyrics -> return original")
             callback(song)
             return
         }
 
         executor.execute {
+            TranslationDebugReporter.updateState(
+                state = "Running",
+                detail = "Translate in progress",
+                song = song,
+                settings = settings
+            )
             val translatedSong = runCatching {
                 translateSong(song, settings)
             }.getOrElse {
                 Log.w(TAG, "translate song failed", it)
+                TranslationDebugReporter.updateState(
+                    state = "Error",
+                    detail = "Translate failed: ${it.message}",
+                    song = song,
+                    settings = settings
+                )
                 song
             }
             Log.i(TAG, "translateSongIfNeededAsync: callback with translatedSongId=${translatedSong?.hashCode()}")
+            TranslationDebugReporter.updateState(
+                state = "Done",
+                detail = "Translate finished",
+                song = translatedSong ?: song,
+                settings = settings
+            )
             callback(translatedSong)
         }
     }
@@ -241,6 +270,7 @@ object AutoTranslationManager {
         }
 
         Log.i(TAG, "translateSong: begin, totalLines=${sourceLines.size}")
+        TranslationDebugReporter.appendLog("translateSong: totalLines=${sourceLines.size}")
         val translationByText = mutableMapOf<String, String>()
         val missedTexts = LinkedHashSet<String>()
 
@@ -249,6 +279,7 @@ object AutoTranslationManager {
             settings.ignoreRegex.takeIf { it.isNotEmpty() }?.toRegex()
         }.getOrNull()
         Log.i(TAG, "translateSong: ignoreRegex=$ignoreRegex")
+        TranslationDebugReporter.appendLog("translateSong: ignoreRegex=$ignoreRegex")
 
         // 遍历每行，检查是否需要翻译
         for (line in sourceLines) {
@@ -277,8 +308,12 @@ object AutoTranslationManager {
         }
 
         Log.i(TAG, "translateSong: cachedTranslations=${translationByText.size}, missed=${missedTexts.size}")
+        TranslationDebugReporter.appendLog(
+            "translateSong: cached=${translationByText.size}, missed=${missedTexts.size}"
+        )
         // 请求未命中的批量翻译
         if (missedTexts.isNotEmpty()) {
+            TranslationDebugReporter.appendLog("translateSong: request batch size=${missedTexts.size}")
             val newTranslations = requestTranslation(settings, missedTexts.toList())
             if (!newTranslations.isNullOrEmpty()) {
                 val cachedPairs = mutableListOf<Pair<String, String>>()
@@ -300,11 +335,13 @@ object AutoTranslationManager {
                 )
             } else {
                 Log.w(TAG, "translateSong: requestOpenAiTranslation returned null or empty result")
+                TranslationDebugReporter.appendLog("translateSong: request returned empty result")
             }
         }
 
         if (translationByText.isEmpty()) {
             Log.d(TAG, "translateSong: no translations found/produced -> return original")
+            TranslationDebugReporter.appendLog("translateSong: no translations produced")
             return song
         }
 

@@ -56,6 +56,7 @@ open class LyricPlayerView(
 
     // 视图缓存与临时集合
     private val activeLyricLines = mutableListOf<IRichLyricLine>()
+    private var lastCurrentLineKey: String? = null
     private val textRecycleLineView by lazy { RichLyricLineView(context) }
     private val defaultLayoutParams =
         LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
@@ -242,6 +243,7 @@ open class LyricPlayerView(
         Log.d(TAG, "reset")
         removeAllViews()
         activeLyricLines.clear()
+        lastCurrentLineKey = null
         if (isEnteringInterludeMode) exitInterludeMode()
     }
 
@@ -290,6 +292,16 @@ open class LyricPlayerView(
         timingNavigator.forEachAtOrPrevious(position) { tempFoundActiveLines.add(it) }
 
         val matches = tempFoundActiveLines
+        val currentLine = matches.lastOrNull()
+        val currentKey = currentLine?.let { "${it.begin}:${it.end}:${it.text}" }
+        if (currentKey != lastCurrentLineKey) {
+            lastCurrentLineKey = currentKey
+            if (currentLine != null) {
+                lyricCountChangeListeners.forEach {
+                    it.onCurrentLineChanged(currentLine)
+                }
+            }
+        }
         updateActiveViews(matches)
 
         // 同步所有子视图的进度或 seek 操作
@@ -675,6 +687,7 @@ open class LyricPlayerView(
     interface LyricCountChangeListener {
         fun onLyricTextChanged(old: String, new: String)
         fun onLyricChanged(news: List<IRichLyricLine>, removes: List<IRichLyricLine>)
+        fun onCurrentLineChanged(line: IRichLyricLine?) {}
     }
 }
 

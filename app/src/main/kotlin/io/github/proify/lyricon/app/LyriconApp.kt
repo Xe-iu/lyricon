@@ -15,10 +15,15 @@ import com.highcapable.yukihookapi.YukiHookAPI.Status.Executor
 import com.highcapable.yukihookapi.hook.factory.dataChannel
 import com.highcapable.yukihookapi.hook.xposed.application.ModuleApplication
 import com.highcapable.yukihookapi.hook.xposed.channel.YukiHookDataChannel
+import io.github.proify.android.extensions.json
+import io.github.proify.android.extensions.safeDecode
 import io.github.proify.lyricon.app.util.AppLangUtils
 import io.github.proify.lyricon.app.util.LyricPrefs
+import io.github.proify.lyricon.app.util.TranslationDebugStore
 import io.github.proify.lyricon.common.PackageNames
 import io.github.proify.lyricon.common.util.safe
+import io.github.proify.lyricon.lyric.style.TranslationDebugInfo
+import io.github.proify.lyricon.app.bridge.AppBridgeConstants
 
 class LyriconApp : ModuleApplication() {
 
@@ -46,6 +51,11 @@ class LyriconApp : ModuleApplication() {
             updateRemoteLyricStyle()
         }.onFailure {
             Log.w(TAG, "sync settings on app start failed", it)
+        }
+        systemUIChannel.wait<ByteArray>(AppBridgeConstants.REQUEST_TRANSLATION_DEBUG_INFO) { data ->
+            val jsonText = data.toString(Charsets.UTF_8)
+            val info = json.safeDecode<TranslationDebugInfo>(jsonText) ?: return@wait
+            TranslationDebugStore.persist(this, info)
         }
     }
 

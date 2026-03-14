@@ -16,6 +16,7 @@ import io.github.proify.lyricon.lyric.model.Song
 import io.github.proify.lyricon.provider.ProviderInfo
 import io.github.proify.lyricon.statusbarlyric.StatusBarLyric
 import io.github.proify.lyricon.statusbarlyric.SuperLogo
+import io.github.proify.lyricon.xposed.systemui.lyric.TranslationDebugReporter
 import io.github.proify.lyricon.xposed.systemui.util.LyricPrefs
 import io.github.proify.lyricon.xposed.systemui.util.NotificationCoverHelper
 import io.github.proify.lyricon.xposed.systemui.util.OplusCapsuleHooker
@@ -295,7 +296,29 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
 
     private fun dispatchAutoTranslation(song: Song?) {
         val settings = LyricPrefs.getActiveTranslationSettings()
-        if (!settings.isUsable || song == null) return
+        if (!settings.isUsable) {
+            TranslationDebugReporter.updateState(
+                state = "Disabled",
+                detail = "Auto translation disabled or API key missing",
+                song = song,
+                settings = settings
+            )
+            return
+        }
+        if (song == null) {
+            TranslationDebugReporter.updateState(
+                state = "Skipped",
+                detail = "No song info",
+                settings = settings
+            )
+            return
+        }
+        TranslationDebugReporter.updateState(
+            state = "Queued",
+            detail = "Dispatch translation",
+            song = song,
+            settings = settings
+        )
 
         songVersion++
         val version = songVersion

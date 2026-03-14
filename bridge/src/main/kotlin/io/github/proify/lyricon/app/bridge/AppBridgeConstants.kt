@@ -10,6 +10,7 @@ object AppBridgeConstants {
     const val REQUEST_UPDATE_LYRIC_STYLE: String = "request_update_lyric_style"
     const val REQUEST_SYNC_SETTINGS_SNAPSHOT: String = "request_sync_settings_snapshot"
     const val REQUEST_HIGHLIGHT_VIEW: String = "request_highlight_view"
+    const val REQUEST_TRANSLATION_DEBUG_INFO: String = "request_translation_debug_info"
 
     const val REQUEST_CHECK_SAFE_MODE: String = "request_check_safe_mode"
     const val REQUEST_CHECK_SAFE_MODE_CALLBACK: String = REQUEST_CHECK_SAFE_MODE + "_callback"

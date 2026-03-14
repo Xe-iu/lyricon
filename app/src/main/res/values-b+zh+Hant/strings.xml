@@ -177,6 +177,10 @@
     <string name="item_translation_api_key">API Key</string>
     <string name="item_translation_model">模型</string>
     <string name="item_translation_base_url">介面地址</string>
+    <string name="item_translation_status">翻譯狀態</string>
+    <string name="item_translation_status_unknown">無狀態</string>
+    <string name="item_translation_log">翻譯日誌</string>
+    <string name="item_translation_log_empty">暫無日誌</string>
     <string name="item_translation_openai_api_key">OpenAI API Key</string>
     <string name="item_translation_openai_model">OpenAI 模型</string>
     <string name="item_translation_openai_base_url">OpenAI 介面地址</string>

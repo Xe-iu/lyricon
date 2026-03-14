@@ -19,11 +19,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.github.proify.android.extensions.defaultSharedPreferences
+import io.github.proify.android.extensions.json
+import io.github.proify.android.extensions.safeDecode
 import io.github.proify.lyricon.app.R
 import io.github.proify.lyricon.app.compose.IconActions
+import io.github.proify.lyricon.app.compose.custom.miuix.basic.AppBasicComponent
 import io.github.proify.lyricon.app.compose.custom.miuix.basic.ScrollBehavior
 import io.github.proify.lyricon.app.compose.preference.CheckboxPreference
 import io.github.proify.lyricon.app.compose.preference.InputPreference
@@ -33,7 +38,9 @@ import io.github.proify.lyricon.app.compose.preference.SwitchPreference
 import io.github.proify.lyricon.app.compose.preference.TextColorPreference
 import io.github.proify.lyricon.app.compose.preference.rememberStringPreference
 import io.github.proify.lyricon.app.util.editCommit
+import io.github.proify.lyricon.app.util.TranslationDebugStore
 import io.github.proify.lyricon.lyric.style.TextStyle
+import io.github.proify.lyricon.lyric.style.TranslationDebugInfo
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.extra.CheckboxLocation
@@ -295,6 +302,7 @@ fun TextPage(scrollBehavior: ScrollBehavior, preferences: SharedPreferences) {
                     defaultValue = "https://api.openai.com/v1/chat/completions",
                     leftAction = { IconActions(painterResource(R.drawable.link_24px)) },
                 )
+                TranslationDebugInfoCard()
             }
         }
 
@@ -376,6 +384,53 @@ fun TextPage(scrollBehavior: ScrollBehavior, preferences: SharedPreferences) {
             }
         }
     }
+}
+
+@Composable
+private fun TranslationDebugInfoCard() {
+    val context = LocalContext.current
+    val prefs = context.defaultSharedPreferences
+    val raw = rememberStringPreference(prefs, TranslationDebugStore.PREF_KEY_DEBUG_INFO, null).value
+    val info = remember(raw) {
+        json.safeDecode<TranslationDebugInfo>(raw)
+    }
+    val state = info?.state ?: stringResource(R.string.item_translation_status_unknown)
+    val detail = info?.detail
+    val provider = info?.provider
+    val model = info?.model
+    val targetLanguage = info?.targetLanguage
+    val song = listOfNotNull(info?.songName, info?.songArtist)
+        .joinToString(" - ")
+        .ifBlank { null }
+
+    val statusSummary = buildString {
+        append(state)
+        if (!detail.isNullOrBlank()) append("\n").append(detail)
+        if (!provider.isNullOrBlank() || !model.isNullOrBlank() || !targetLanguage.isNullOrBlank()) {
+            append("\n").append("provider=").append(provider ?: "-")
+            append(", model=").append(model ?: "-")
+            append(", target=").append(targetLanguage ?: "-")
+        }
+        if (!song.isNullOrBlank()) {
+            append("\n").append(song)
+        }
+    }
+
+    val logLines = info?.logLines.orEmpty()
+    val logSummary = when {
+        logLines.isEmpty() -> stringResource(R.string.item_translation_log_empty)
+        logLines.size <= 8 -> logLines.joinToString("\n")
+        else -> logLines.takeLast(8).joinToString("\n", prefix = "...\n")
+    }
+
+    AppBasicComponent(
+        title = stringResource(R.string.item_translation_status),
+        summary = statusSummary
+    )
+    AppBasicComponent(
+        title = stringResource(R.string.item_translation_log),
+        summary = logSummary
+    )
 }
 
 @Composable

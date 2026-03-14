@@ -27,6 +27,7 @@ import io.github.proify.lyricon.common.util.ViewHierarchyParser
 import io.github.proify.lyricon.xposed.systemui.lyric.LyricViewController
 import io.github.proify.lyricon.xposed.systemui.lyric.StatusBarViewController
 import io.github.proify.lyricon.xposed.systemui.lyric.StatusBarViewManager
+import io.github.proify.lyricon.xposed.systemui.lyric.TranslationDebugReporter
 import io.github.proify.lyricon.xposed.systemui.util.CrashDetector
 import io.github.proify.lyricon.xposed.systemui.util.LyricPrefs
 import io.github.proify.lyricon.xposed.systemui.util.NotificationCoverHelper
@@ -100,6 +101,7 @@ object SystemUIHooker : YukiBaseHooker() {
         NotificationCoverHelper.initialize(context.classLoader)
         ViewVisibilityTracker.initialize(context.classLoader)
         initDataChannel()
+        TranslationDebugReporter.initialize(dataChannel)
         ActivePlayerDispatcher.addActivePlayerListener(LyricViewController)
 
         StatusBarDisableHooker.inject(context.classLoader)

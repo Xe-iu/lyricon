@@ -17,7 +17,7 @@ abstract class AbstractLyricActivity : BaseActivity(),
         sharedPreferences: SharedPreferences?,
         key: String?,
     ) {
-        if (key?.startsWith("lyric_style_") == true) {
+        if (key?.startsWith("lyric_style_") == true || key?.startsWith("lyric_translation_") == true) {
             updateRemoteLyricStyle()
         }
     }

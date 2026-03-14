@@ -247,9 +247,13 @@ class StatusBarLyric(
             ) {
                 val last = news.lastOrNull()
                 currentLyric = last?.text
-                val key = last?.let { "${it.begin}:${it.end}:${it.text}" } ?: currentLyric
-                applyDriftOnLyricChange(key)
                 refreshLyricTimeoutState()
+            }
+
+            override fun onCurrentLineChanged(line: IRichLyricLine?) {
+                if (line == null) return
+                val key = line?.let { "${it.begin}:${it.end}:${it.text}" } ?: line?.text
+                applyDriftOnLyricChange(key)
             }
         }
 
