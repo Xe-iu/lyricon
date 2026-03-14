@@ -7,20 +7,43 @@
 @file:Suppress("unused")
 
 package io.github.proify.android.extensions
+
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Build
 import io.github.proify.lyricon.common.util.safe
 
-fun Context.getPrivateSharedPreferences(name: String): SharedPreferences =
-    getSharedPreferences(name, Context.MODE_PRIVATE).safe()
+private fun Context.deviceProtectedContext(): Context {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        createDeviceProtectedStorageContext()
+    } else {
+        this
+    }
+}
+
+private fun Context.tryMovePrefsToDeviceProtected(name: String) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        runCatching {
+            val dpContext = deviceProtectedContext()
+            dpContext.moveSharedPreferencesFrom(this, name)
+        }
+    }
+}
+
+fun Context.getPrivateSharedPreferences(name: String): SharedPreferences {
+    tryMovePrefsToDeviceProtected(name)
+    return deviceProtectedContext().getSharedPreferences(name, Context.MODE_PRIVATE).safe()
+}
 
 /**
  * 尝试获取 world-readable 的 SharedPreferences，失败则返回私有的
  */
 @SuppressLint("WorldReadableFiles")
 fun Context.getWorldReadableSharedPreferences(name: String): SharedPreferences = try {
-    @Suppress("DEPRECATION") getSharedPreferences(name, Context.MODE_WORLD_READABLE).safe()
+    tryMovePrefsToDeviceProtected(name)
+    val context = deviceProtectedContext()
+    @Suppress("DEPRECATION") context.getSharedPreferences(name, Context.MODE_WORLD_READABLE).safe()
 } catch (_: Exception) {
     getPrivateSharedPreferences(name)
 }
