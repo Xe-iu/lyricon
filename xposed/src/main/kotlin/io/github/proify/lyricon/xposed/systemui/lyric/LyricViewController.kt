@@ -42,6 +42,7 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
     private const val UPDATE_INTERVAL_MS = 1000L / 60L
     private const val PLAYBACK_STALE_MS = 2500L
     private const val PLAYBACK_STOP_DELAY_MS = 1200L
+    private const val PLAYBACK_SWITCH_GRACE_MS = 1500L
 
     @Volatile
     var isPlaying: Boolean = false
@@ -61,6 +62,7 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
     private var songVersion: Long = 0L
     private var lastPosition: Long = 0L
     private var lastPositionUpdateMs: Long = 0L
+    private var lastSongChangeMs: Long = 0L
 
     fun getLastPositionSnapshot(): Long? =
         if (lastPositionUpdateMs > 0L) lastPosition else null
@@ -92,8 +94,14 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
             uiHandler.removeMessages(MSG_PLAYBACK_STATE_DELAYED)
             uiHandler.obtainMessage(MSG_PLAYBACK_STATE, 1, 0).sendToTarget()
         } else {
-            uiHandler.removeMessages(MSG_PLAYBACK_STATE_DELAYED)
-            uiHandler.sendEmptyMessageDelayed(MSG_PLAYBACK_STATE_DELAYED, PLAYBACK_STOP_DELAY_MS)
+            val now = SystemClock.uptimeMillis()
+            if (now - lastSongChangeMs < PLAYBACK_SWITCH_GRACE_MS) {
+                uiHandler.removeMessages(MSG_PLAYBACK_STATE_DELAYED)
+                uiHandler.sendEmptyMessageDelayed(MSG_PLAYBACK_STATE_DELAYED, PLAYBACK_STOP_DELAY_MS)
+            } else {
+                uiHandler.removeMessages(MSG_PLAYBACK_STATE_DELAYED)
+                uiHandler.obtainMessage(MSG_PLAYBACK_STATE, 0, 0).sendToTarget()
+            }
         }
     }
 
@@ -194,6 +202,7 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
 
                 MSG_SONG_CHANGED -> {
                     val song = msg.obj as? Song
+                    lastSongChangeMs = SystemClock.uptimeMillis()
                     view.setSong(song)
                     if (song != null && !isPlaying) {
                         view.setPlaying(true)
