@@ -205,8 +205,12 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
                     val song = msg.obj as? Song
                     lastSongChangeMs = SystemClock.uptimeMillis()
                     view.setSong(song)
-                    if (song != null && !isPlaying) {
-                        view.setPlaying(true)
+                    if (song != null) {
+                        val now = SystemClock.uptimeMillis()
+                        val recentlyActive = now - lastPositionUpdateMs <= PLAYBACK_STALE_MS
+                        if (isPlaying || recentlyActive) {
+                            view.setPlaying(true)
+                        }
                     }
                     if (song != null && lastPositionUpdateMs > 0L) {
                         view.setPosition(lastPosition)
@@ -225,6 +229,7 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
                 }
                 MSG_PLAYBACK_STATE_DELAYED -> {
                     val now = SystemClock.uptimeMillis()
+                    if (now - lastSongChangeMs < PLAYBACK_SWITCH_GRACE_MS) return
                     val stale = now - lastPositionUpdateMs > PLAYBACK_STALE_MS
                     if (stale) {
                         view.setPlaying(false)
