@@ -63,7 +63,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lyricon-${{ github.event.inputs.build_type }}-apk
-          path: lyricon/build/outputs/apk/${{ github.event.inputs.build_type }}/lyricon-${{ github.event.inputs.build_type }}.apk
+          path: build/all-apks/${{ github.event.inputs.build_type }}/*.apk
           if-no-files-found: warn
 
       - name: 清理敏感文件
