@@ -100,13 +100,14 @@ data class BasicStyle(
             Defaults.KEYWORD_HIDE_TIMEOUT
         )
 
-        preferences.getString("lyric_style_base_timeout_hide_keywords", null)
-            ?.trim()
-            ?.lines()
-            .let {
-                keywordHideMatches = it ?: emptyList()
-                keywordsHidePattern = null
-            }
+        val rawKeywords = preferences.getString("lyric_style_base_timeout_hide_keywords", null)
+        val decodedKeywords = if (rawKeywords?.trim()?.startsWith("[") == true) {
+            json.safeDecode<List<String>>(rawKeywords, emptyList())
+        } else {
+            rawKeywords?.trim()?.lines()?.filter { it.isNotBlank() } ?: emptyList()
+        }
+        keywordHideMatches = decodedKeywords
+        keywordsHidePattern = null
 
         doubleTapSwitchClock = preferences.getBoolean(
             "lyric_style_base_double_tap_switch_clock",

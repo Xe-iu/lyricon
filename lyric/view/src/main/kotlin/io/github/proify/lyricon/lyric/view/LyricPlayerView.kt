@@ -209,6 +209,7 @@ open class LyricPlayerView(
         updateLayoutTransitionHandler(config)
 
         forEach { if (it is RichLyricLineView) it.setTransitionConfig(config) }
+        if (isNotEmpty()) layoutTransition = layoutTransitionHandler
 
         Log.d("LyricPlayerView", "setTransitionConfig: $config")
     }

@@ -167,6 +167,7 @@ class StatusBarLyric(
     private var pendingDriftX: Float = 0f
     private var pendingDriftY: Float = 0f
     private var driftApplyScheduled: Boolean = false
+    private var lastLyricDriftKey: String? = null
 
     private val choreographer: Choreographer = Choreographer.getInstance()
     private var lastFrameTimeNs: Long = 0L
@@ -236,7 +237,7 @@ class StatusBarLyric(
 
             override fun onLyricTextChanged(old: String, new: String) {
                 currentLyric = new
-                applyDriftOnLyricChange()
+                applyDriftOnLyricChange(new)
                 refreshLyricTimeoutState()
             }
 
@@ -244,8 +245,10 @@ class StatusBarLyric(
                 news: List<IRichLyricLine>,
                 removes: List<IRichLyricLine>
             ) {
-                currentLyric = news.lastOrNull()?.text
-                applyDriftOnLyricChange()
+                val last = news.lastOrNull()
+                currentLyric = last?.text
+                val key = last?.let { "${it.begin}:${it.end}:${it.text}" } ?: currentLyric
+                applyDriftOnLyricChange(key)
                 refreshLyricTimeoutState()
             }
         }
@@ -485,9 +488,11 @@ class StatusBarLyric(
         }
     }
 
-    private fun applyDriftOnLyricChange() {
+    private fun applyDriftOnLyricChange(key: String?) {
         if (!driftEnabled || driftMode != BasicStyle.OLED_SHIFT_MODE_ON_LYRIC_CHANGE) return
         if (!isPlaying) return
+        if (key != null && key == lastLyricDriftKey) return
+        lastLyricDriftKey = key
         applyRandomDrift()
     }
 
@@ -574,6 +579,7 @@ class StatusBarLyric(
         cancelDriftSchedule()
         translationX = 0f
         translationY = 0f
+        lastLyricDriftKey = null
     }
 
     private fun cancelDriftSchedule() {

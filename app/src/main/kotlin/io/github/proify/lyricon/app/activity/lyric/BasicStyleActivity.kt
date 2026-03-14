@@ -489,7 +489,12 @@ class BasicLyricStyleActivity : AbstractLyricActivity() {
                 if (BasicStyle.Defaults.KEYWORD_HIDE_MATCH.isEmpty()) null
                 else BasicStyle.Defaults.KEYWORD_HIDE_MATCH.joinToString()
             )
-            val summary = keywords
+            val parsed = if (!keywords.isNullOrBlank() && keywords.trim().startsWith("[")) {
+                io.github.proify.android.extensions.json.safeDecode<List<String>>(keywords, emptyList())
+            } else {
+                keywords?.lines()?.filter { it.isNotBlank() } ?: emptyList()
+            }
+            val summary = parsed.joinToString("\n").ifBlank { null }
 
             InputPreference(
                 sharedPreferences = preferences,
