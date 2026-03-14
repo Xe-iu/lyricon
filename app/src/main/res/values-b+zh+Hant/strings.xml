@@ -143,6 +143,12 @@
     <string name="no_provider_available">沒有可用的歌詞提供者</string>
     <string name="item_base_lockscreen_hidden">在鎖定畫面隱藏</string>
     <string name="item_base_double_tap_switch_clock">雙擊切換時鐘/歌詞</string>
+    <string name="item_base_listen_statusbar_color">監聽狀態列顏色變化</string>
+    <string name="item_base_statusbar_color_source">顏色監聽來源</string>
+    <string name="option_color_source_clock">時鐘顏色</string>
+    <string name="option_color_source_anchor">錨點視圖顏色</string>
+    <string name="option_color_source_custom_anchor">自訂錨點視圖顏色</string>
+    <string name="item_base_statusbar_color_anchor_id">自訂錨點 ID</string>
     <string name="item_base_oled_shift_enable">OLED 防燒屏漂移</string>
     <string name="item_base_oled_shift_mode">漂移模式</string>
     <string name="item_base_oled_shift_range">漂移範圍</string>

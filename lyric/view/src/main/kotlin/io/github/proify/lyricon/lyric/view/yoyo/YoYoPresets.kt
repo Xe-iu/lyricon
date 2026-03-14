@@ -10,6 +10,7 @@ import io.github.proify.lyricon.lyric.view.yoyo.anim.MyTechniques
 object YoYoPresets {
     const val DEFAULT_OUT_ID: String = "out_fade_out_up"
     const val DEFAULT_IN_ID: String = "in_fade_in_up"
+    private val UNIFIED_INTERPOLATOR: Interpolator = FastOutSlowInInterpolator()
 
     private fun pair(
         outTech: Any,
@@ -298,6 +299,9 @@ object YoYoPresets {
     fun getByIds(outId: String?, inId: String?): Pair<AnimConfig, AnimConfig>? {
         val out = getOutById(outId)
         val `in` = getInById(inId)
-        return if (out != null && `in` != null) out to `in` else null
+        return if (out != null && `in` != null) {
+            out.copy(interpolator = UNIFIED_INTERPOLATOR) to
+                    `in`.copy(interpolator = UNIFIED_INTERPOLATOR)
+        } else null
     }
 }

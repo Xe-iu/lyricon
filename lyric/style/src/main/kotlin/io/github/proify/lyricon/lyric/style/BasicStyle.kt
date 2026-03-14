@@ -32,6 +32,9 @@ data class BasicStyle(
     var keywordHideTimeout: Int = Defaults.KEYWORD_HIDE_TIMEOUT,
     var keywordHideMatches: List<String> = Defaults.KEYWORD_HIDE_MATCH,
     var doubleTapSwitchClock: Boolean = Defaults.DOUBLE_TAP_SWITCH_CLOCK,
+    var listenStatusBarColor: Boolean = Defaults.LISTEN_STATUS_BAR_COLOR,
+    var statusBarColorSource: Int = Defaults.STATUS_BAR_COLOR_SOURCE,
+    var statusBarColorAnchorId: String? = Defaults.STATUS_BAR_COLOR_ANCHOR_ID,
     var oledShiftEnabled: Boolean = Defaults.OLED_SHIFT_ENABLED,
     var oledShiftMode: Int = Defaults.OLED_SHIFT_MODE,
     var oledShiftRangeDp: Float = Defaults.OLED_SHIFT_RANGE_DP,
@@ -110,6 +113,18 @@ data class BasicStyle(
             "lyric_style_base_double_tap_switch_clock",
             Defaults.DOUBLE_TAP_SWITCH_CLOCK
         )
+        listenStatusBarColor = preferences.getBoolean(
+            "lyric_style_base_listen_statusbar_color",
+            Defaults.LISTEN_STATUS_BAR_COLOR
+        )
+        statusBarColorSource = preferences.getInt(
+            "lyric_style_base_statusbar_color_source",
+            Defaults.STATUS_BAR_COLOR_SOURCE
+        )
+        statusBarColorAnchorId = preferences.getString(
+            "lyric_style_base_statusbar_color_anchor_id",
+            Defaults.STATUS_BAR_COLOR_ANCHOR_ID
+        )
         oledShiftEnabled = preferences.getBoolean(
             "lyric_style_base_oled_shift_enable",
             Defaults.OLED_SHIFT_ENABLED
@@ -159,6 +174,9 @@ data class BasicStyle(
         )
         editor.putString("lyric_style_base_timeout_hide_keywords", keywordHideMatches.toJson())
         editor.putBoolean("lyric_style_base_double_tap_switch_clock", doubleTapSwitchClock)
+        editor.putBoolean("lyric_style_base_listen_statusbar_color", listenStatusBarColor)
+        editor.putInt("lyric_style_base_statusbar_color_source", statusBarColorSource)
+        editor.putString("lyric_style_base_statusbar_color_anchor_id", statusBarColorAnchorId)
         editor.putBoolean("lyric_style_base_oled_shift_enable", oledShiftEnabled)
         editor.putInt("lyric_style_base_oled_shift_mode", oledShiftMode)
         editor.putFloat("lyric_style_base_oled_shift_range", oledShiftRangeDp)
@@ -182,6 +200,9 @@ data class BasicStyle(
         const val KEYWORD_HIDE_TIMEOUT: Int = 0
         val KEYWORD_HIDE_MATCH: List<String> = listOf()
         const val DOUBLE_TAP_SWITCH_CLOCK: Boolean = false
+        const val LISTEN_STATUS_BAR_COLOR: Boolean = true
+        const val STATUS_BAR_COLOR_SOURCE: Int = COLOR_SOURCE_CLOCK
+        const val STATUS_BAR_COLOR_ANCHOR_ID: String? = null
         const val OLED_SHIFT_ENABLED: Boolean = false
         const val OLED_SHIFT_MODE: Int = OLED_SHIFT_MODE_ON_LYRIC_CHANGE
         const val OLED_SHIFT_RANGE_DP: Float = 2.0f
@@ -196,5 +217,8 @@ data class BasicStyle(
         const val OLED_SHIFT_MODE_ON_LYRIC_CHANGE: Int = 0
         const val OLED_SHIFT_MODE_INTERVAL: Int = 1
         const val OLED_SHIFT_MODE_RANDOM_INTERVAL: Int = 2
+        const val COLOR_SOURCE_CLOCK: Int = 0
+        const val COLOR_SOURCE_ANCHOR: Int = 1
+        const val COLOR_SOURCE_CUSTOM_ANCHOR: Int = 2
     }
 }

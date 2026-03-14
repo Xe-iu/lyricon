@@ -11,8 +11,10 @@ import android.annotation.SuppressLint
 import android.app.KeyguardManager
 import android.content.Context
 import android.os.Handler
+import android.os.HandlerThread
 import android.os.SystemClock
 import android.util.Log
+import android.view.Choreographer
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -34,7 +36,6 @@ import io.github.proify.lyricon.statusbarlyric.StatusBarLyric.LyricType.NONE
 import io.github.proify.lyricon.statusbarlyric.StatusBarLyric.LyricType.SONG
 import io.github.proify.lyricon.statusbarlyric.StatusBarLyric.LyricType.TEXT
 import kotlin.math.max
-import kotlin.random.Random
 
 @SuppressLint("ViewConstructor")
 class StatusBarLyric(
@@ -46,6 +47,36 @@ class StatusBarLyric(
     companion object {
         const val VIEW_TAG: String = "lyricon:lyric_view"
         private const val TAG = "StatusBarLyric"
+        private const val JANK_FRAME_THRESHOLD_NS: Long = 48_000_000L
+        private const val JANK_CLEAR_COOLDOWN_MS: Long = 300L
+        private const val WORKER_THREAD_NAME = "LyriconStatusBarWorker"
+        @Volatile private var workerThread: HandlerThread? = null
+        @Volatile private var workerHandler: Handler? = null
+        @Volatile private var workerRefCount: Int = 0
+
+        private fun acquireWorker(): Handler {
+            val existing = workerHandler
+            if (existing != null) {
+                workerRefCount++
+                return existing
+            }
+            val thread = HandlerThread(WORKER_THREAD_NAME).apply { start() }
+            workerThread = thread
+            val handler = Handler(thread.looper)
+            workerHandler = handler
+            workerRefCount = 1
+            return handler
+        }
+
+        private fun releaseWorker() {
+            val count = workerRefCount - 1
+            workerRefCount = count
+            if (count > 0) return
+            workerRefCount = 0
+            workerHandler = null
+            workerThread?.quitSafely()
+            workerThread = null
+        }
     }
 
     val logoView: SuperLogo = SuperLogo(context).apply {
@@ -106,9 +137,11 @@ class StatusBarLyric(
 
     // 主线程调度器
     private val mainHandler: Handler = Handler(context.mainLooper)
+    private var localWorkerHandler: Handler? = null
 
     // 当前生效的超时 Runnable
     private var lyricTimeoutTask: Runnable? = null
+    @Volatile private var lyricTimeoutVersion: Int = 0
 
     // 跟随系统隐藏状态栏内容
     var isDisabledVisible = false
@@ -121,13 +154,39 @@ class StatusBarLyric(
 
     private val driftHandler: Handler = Handler(context.mainLooper)
     private var driftTask: Runnable? = null
-    private var driftRandom: Random = Random(SystemClock.uptimeMillis().toInt())
+    private var driftSeed: Int = SystemClock.uptimeMillis().toInt()
     private var driftEnabled: Boolean = BasicStyle.Defaults.OLED_SHIFT_ENABLED
     private var driftMode: Int = BasicStyle.Defaults.OLED_SHIFT_MODE
     private var driftRangeDp: Float = BasicStyle.Defaults.OLED_SHIFT_RANGE_DP
     private var driftIntervalSec: Int = BasicStyle.Defaults.OLED_SHIFT_INTERVAL_SEC
     private var driftRandomIntervalMinSec: Int = BasicStyle.Defaults.OLED_SHIFT_RANDOM_MIN_SEC
     private var driftRandomIntervalMaxSec: Int = BasicStyle.Defaults.OLED_SHIFT_RANDOM_MAX_SEC
+    private var lastDriftX: Float = 0f
+    private var lastDriftY: Float = 0f
+    private var pendingDriftX: Float = 0f
+    private var pendingDriftY: Float = 0f
+    private var driftApplyScheduled: Boolean = false
+
+    private val choreographer: Choreographer = Choreographer.getInstance()
+    private var lastFrameTimeNs: Long = 0L
+    private var lastJankClearMs: Long = 0L
+    private val frameCallback = object : Choreographer.FrameCallback {
+        override fun doFrame(frameTimeNanos: Long) {
+            if (!isAttachedToWindow) return
+            if (lastFrameTimeNs != 0L && isPlaying && isShown) {
+                val deltaNs = frameTimeNanos - lastFrameTimeNs
+                if (deltaNs > JANK_FRAME_THRESHOLD_NS) {
+                    val nowMs = SystemClock.uptimeMillis()
+                    if (nowMs - lastJankClearMs > JANK_CLEAR_COOLDOWN_MS) {
+                        textView.clearAnimationsNow()
+                        lastJankClearMs = nowMs
+                    }
+                }
+            }
+            lastFrameTimeNs = frameTimeNanos
+            choreographer.postFrameCallback(this)
+        }
+    }
 
     // --- 系统 / 辅助组件 ---
 
@@ -450,7 +509,7 @@ class StatusBarLyric(
     private fun nextRandomIntervalMs(): Long {
         val minSec = max(0, driftRandomIntervalMinSec)
         val maxSec = max(minSec, driftRandomIntervalMaxSec)
-        val next = if (maxSec == minSec) minSec else driftRandom.nextInt(minSec, maxSec + 1)
+        val next = if (maxSec == minSec) minSec else nextInt(minSec, maxSec + 1)
         return next * 1000L
     }
 
@@ -458,14 +517,49 @@ class StatusBarLyric(
         val rangeDp = driftRangeDp.coerceAtLeast(0f)
         val rangePx = rangeDp.dp.toFloat()
         if (rangePx <= 0f) {
-            translationX = 0f
-            translationY = 0f
+            scheduleDriftApply(0f, 0f)
             return
         }
-        val offsetX = (driftRandom.nextFloat() * 2f - 1f) * rangePx
-        val offsetY = (driftRandom.nextFloat() * 2f - 1f) * rangePx
-        translationX = offsetX
-        translationY = offsetY
+        val offsetX = (nextFloat() * 2f - 1f) * rangePx
+        val offsetY = (nextFloat() * 2f - 1f) * rangePx
+        scheduleDriftApply(offsetX, offsetY)
+    }
+
+    private fun scheduleDriftApply(offsetX: Float, offsetY: Float) {
+        pendingDriftX = offsetX
+        pendingDriftY = offsetY
+        if (driftApplyScheduled) return
+        driftApplyScheduled = true
+        postOnAnimation {
+            driftApplyScheduled = false
+            if (pendingDriftX == lastDriftX && pendingDriftY == lastDriftY) return@postOnAnimation
+            translationX = pendingDriftX
+            translationY = pendingDriftY
+            lastDriftX = pendingDriftX
+            lastDriftY = pendingDriftY
+        }
+    }
+
+    private fun nextInt(min: Int, maxExclusive: Int): Int {
+        val bound = maxExclusive - min
+        if (bound <= 0) return min
+        val r = nextInt()
+        val m = r % bound
+        return min + if (m < 0) m + bound else m
+    }
+
+    private fun nextFloat(): Float {
+        val v = nextInt().ushr(1)
+        return v / Int.MAX_VALUE.toFloat()
+    }
+
+    private fun nextInt(): Int {
+        var x = driftSeed
+        x = x xor (x shl 13)
+        x = x xor (x ushr 17)
+        x = x xor (x shl 5)
+        driftSeed = x
+        return x
     }
 
     private fun resetDrift() {
@@ -480,10 +574,34 @@ class StatusBarLyric(
     }
 
     private fun refreshLyricTimeoutState() {
-        resetLyricTimeout()
-
+        val version = ++lyricTimeoutVersion
         val basicStyleConfig = currentStyle.basicStyle
+        val hasLyric = hasLyricContent
+        val lyric = currentLyric
+        val keywordPatterns = basicStyleConfig.keywordsHidePattern.orEmpty()
 
+        val handler = localWorkerHandler ?: mainHandler
+        handler.post {
+            val timeoutSec = computeTimeoutSec(
+                basicStyleConfig = basicStyleConfig,
+                hasLyric = hasLyric,
+                lyric = lyric,
+                keywordPatterns = keywordPatterns
+            )
+
+            mainHandler.post {
+                if (lyricTimeoutVersion != version) return@post
+                applyTimeoutState(timeoutSec)
+            }
+        }
+    }
+
+    private fun computeTimeoutSec(
+        basicStyleConfig: BasicStyle,
+        hasLyric: Boolean,
+        lyric: String?,
+        keywordPatterns: List<Regex>
+    ): Int {
         val noLyricTimeoutSec = basicStyleConfig.noLyricHideTimeout
         val noUpdateTimeoutSec = basicStyleConfig.noUpdateHideTimeout
         val keywordTimeoutSec = basicStyleConfig.keywordHideTimeout
@@ -492,14 +610,12 @@ class StatusBarLyric(
         val shouldHideWhenNoUpdate = noUpdateTimeoutSec > 0
         val shouldHideWhenKeywordMatched = keywordTimeoutSec > 0
 
-        val timeoutSec = when {
-            shouldHideWhenNoLyric && !hasLyricContent -> noLyricTimeoutSec
-
-            hasLyricContent -> {
+        return when {
+            shouldHideWhenNoLyric && !hasLyric -> noLyricTimeoutSec
+            hasLyric -> {
                 val keywordMatched =
-                    shouldHideWhenKeywordMatched && !currentLyric.isNullOrEmpty() &&
-                            basicStyleConfig.keywordsHidePattern.orEmpty()
-                                .any { it.containsMatchIn(currentLyric.orEmpty()) }
+                    shouldHideWhenKeywordMatched && !lyric.isNullOrEmpty() &&
+                            keywordPatterns.any { it.containsMatchIn(lyric) }
 
                 when {
                     keywordMatched -> keywordTimeoutSec
@@ -507,10 +623,12 @@ class StatusBarLyric(
                     else -> -1
                 }
             }
-
             else -> -1
         }
+    }
 
+    private fun applyTimeoutState(timeoutSec: Int) {
+        resetLyricTimeout()
         if (timeoutSec > 0) {
             val timeoutRunnable = Runnable {
                 lyricTimedOut = true
@@ -519,7 +637,6 @@ class StatusBarLyric(
             lyricTimeoutTask = timeoutRunnable
             mainHandler.postDelayed(timeoutRunnable, timeoutSec * 1000L)
         }
-
         updateVisibility()
     }
 
@@ -533,5 +650,26 @@ class StatusBarLyric(
 
     private enum class LyricType {
         NONE, SONG, TEXT
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (localWorkerHandler == null) {
+            localWorkerHandler = acquireWorker()
+        }
+        lastFrameTimeNs = 0L
+        lastJankClearMs = 0L
+        choreographer.postFrameCallback(frameCallback)
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        resetLyricTimeout()
+        cancelDriftSchedule()
+        textView.setOnHierarchyChangeListener(null)
+        textView.lyricCountChangeListeners -= lyricCountChangeListener
+        choreographer.removeFrameCallback(frameCallback)
+        localWorkerHandler = null
+        releaseWorker()
     }
 }

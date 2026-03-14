@@ -143,6 +143,12 @@
     <string name="no_provider_available">No lyric providers available</string>
     <string name="item_base_lockscreen_hidden">Hide on lock screen</string>
     <string name="item_base_double_tap_switch_clock">Double-tap to switch clock/lyrics</string>
+    <string name="item_base_listen_statusbar_color">Listen to status bar color changes</string>
+    <string name="item_base_statusbar_color_source">Color monitor source</string>
+    <string name="option_color_source_clock">Clock color</string>
+    <string name="option_color_source_anchor">Anchor view color</string>
+    <string name="option_color_source_custom_anchor">Custom anchor view color</string>
+    <string name="item_base_statusbar_color_anchor_id">Custom anchor ID</string>
     <string name="item_base_oled_shift_enable">OLED anti-burn shift</string>
     <string name="item_base_oled_shift_mode">Shift mode</string>
     <string name="item_base_oled_shift_range">Shift range</string>

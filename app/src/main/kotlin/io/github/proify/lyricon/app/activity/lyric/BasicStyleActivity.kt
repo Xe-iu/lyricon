@@ -216,6 +216,62 @@ class BasicLyricStyleActivity : AbstractLyricActivity() {
                         title = stringResource(R.string.item_base_double_tap_switch_clock),
                     )
 
+                    SwitchPreference(
+                        preferences,
+                        "lyric_style_base_listen_statusbar_color",
+                        defaultValue = BasicStyle.Defaults.LISTEN_STATUS_BAR_COLOR,
+                        startAction = {
+                            IconActions(painterResource(R.drawable.ic_palette))
+                        },
+                        title = stringResource(R.string.item_base_listen_statusbar_color),
+                    )
+
+                    val colorSource = rememberIntPreference(
+                        preferences,
+                        "lyric_style_base_statusbar_color_source",
+                        BasicStyle.Defaults.STATUS_BAR_COLOR_SOURCE
+                    )
+                    val sourceKeys = listOf(
+                        BasicStyle.COLOR_SOURCE_CLOCK,
+                        BasicStyle.COLOR_SOURCE_ANCHOR,
+                        BasicStyle.COLOR_SOURCE_CUSTOM_ANCHOR
+                    )
+                    val sourceOptions = listOf(
+                        SpinnerEntry(title = stringResource(R.string.option_color_source_clock)),
+                        SpinnerEntry(title = stringResource(R.string.option_color_source_anchor)),
+                        SpinnerEntry(title = stringResource(R.string.option_color_source_custom_anchor))
+                    )
+                    val sourceIndex = sourceKeys.indexOf(colorSource.value).coerceAtLeast(0)
+                    SuperSpinner(
+                        startAction = {
+                            IconActions(painterResource(R.drawable.ic_palette))
+                        },
+                        title = stringResource(R.string.item_base_statusbar_color_source),
+                        items = sourceOptions,
+                        selectedIndex = sourceIndex,
+                        onSelectedIndexChange = { colorSource.value = sourceKeys[it] },
+                        enabled = rememberBooleanPreference(
+                            preferences,
+                            "lyric_style_base_listen_statusbar_color",
+                            BasicStyle.Defaults.LISTEN_STATUS_BAR_COLOR
+                        ).value
+                    )
+
+                    InputPreference(
+                        sharedPreferences = preferences,
+                        key = "lyric_style_base_statusbar_color_anchor_id",
+                        title = stringResource(R.string.item_base_statusbar_color_anchor_id),
+                        inputType = InputType.STRING,
+                        leftAction = {
+                            IconActions(painterResource(R.drawable.ic_locationon))
+                        },
+                        enabled = rememberBooleanPreference(
+                            preferences,
+                            "lyric_style_base_listen_statusbar_color",
+                            BasicStyle.Defaults.LISTEN_STATUS_BAR_COLOR
+                        ).value && colorSource.value == BasicStyle.COLOR_SOURCE_CUSTOM_ANCHOR
+                    )
+
                     HideWhenNoLyric()
                     HideWhenNoUpdate()
                     HideWhenKeywords()

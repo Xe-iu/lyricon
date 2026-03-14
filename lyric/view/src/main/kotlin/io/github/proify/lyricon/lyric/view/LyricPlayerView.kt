@@ -669,6 +669,10 @@ open class LyricPlayerView(
         }
     }
 
+    fun clearAnimationsNow() {
+        cancelAllAnimations()
+    }
+
     interface LyricCountChangeListener {
         fun onLyricTextChanged(old: String, new: String)
         fun onLyricChanged(news: List<IRichLyricLine>, removes: List<IRichLyricLine>)

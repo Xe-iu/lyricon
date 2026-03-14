@@ -28,6 +28,7 @@ import io.github.proify.lyricon.lyric.style.LyricStyle
 import io.github.proify.lyricon.statusbarlyric.StatusBarLyric
 import io.github.proify.lyricon.xposed.systemui.util.ClockColorMonitor
 import io.github.proify.lyricon.xposed.systemui.util.OnColorChangeListener
+import io.github.proify.lyricon.xposed.systemui.util.TextViewColorMonitor
 import io.github.proify.lyricon.xposed.systemui.util.ViewVisibilityController
 
 /**
@@ -56,6 +57,19 @@ class StatusBarViewController(
     private var statusBarTouchListener: View.OnTouchListener? = null
 
     private var colorMonitorView: View? = null
+    private var colorMonitorEnabled: Boolean = true
+    private var colorMonitorSource: Int = BasicStyle.Defaults.STATUS_BAR_COLOR_SOURCE
+    private val colorChangeListener = object : OnColorChangeListener {
+        override fun onColorChanged(color: Int, darkIntensity: Float) {
+            lyricView.apply {
+                setStatusBarColor(currentStatusColor.apply {
+                    this.color = color
+                    this.darkIntensity = darkIntensity
+                    translucentColor = color.setColorAlpha(0.5f)
+                })
+            }
+        }
+    }
 
     // --- 生命周期与初始化 ---
     fun onCreate() {
@@ -70,25 +84,7 @@ class StatusBarViewController(
         }
 
         setupDoubleTapHandlers()
-
-
-        val onColorChangeListener = object : OnColorChangeListener {
-            override fun onColorChanged(color: Int, darkIntensity: Float) {
-                lyricView.apply {
-                    setStatusBarColor(currentStatusColor.apply {
-                        this.color = color
-                        this.darkIntensity = darkIntensity
-                        translucentColor = color.setColorAlpha(0.5f)
-                    })
-                }
-            }
-        }
-
-        ClockColorMonitor.hook()
-
-        colorMonitorView = getClockView()?.also {
-            ClockColorMonitor.setListener(it, onColorChangeListener)
-        }
+        updateColorMonitor(currentLyricStyle.basicStyle)
 
         statusBarView.doOnAttach { checkLyricViewExists() }
         YLog.info("Lyric view created for $statusBarView")
@@ -112,6 +108,7 @@ class StatusBarViewController(
         this.currentLyricStyle = lyricStyle
         val basicStyle = lyricStyle.basicStyle
         doubleTapSwitchEnabled = basicStyle.doubleTapSwitchClock
+        updateColorMonitor(basicStyle)
         if (!doubleTapSwitchEnabled) {
             setUserShowClock(false)
         }
@@ -227,6 +224,51 @@ class StatusBarViewController(
         }
     }
 
+    private fun updateColorMonitor(basicStyle: BasicStyle) {
+        colorMonitorEnabled = basicStyle.listenStatusBarColor
+        colorMonitorSource = basicStyle.statusBarColorSource
+        if (!colorMonitorEnabled) {
+            (colorMonitorView as? TextView)?.let {
+                ClockColorMonitor.setListener(it, null)
+                TextViewColorMonitor.setListener(it, null)
+            }
+            colorMonitorView = null
+            return
+        }
+
+        val target = when (colorMonitorSource) {
+            BasicStyle.COLOR_SOURCE_ANCHOR -> findAnchorTextView(basicStyle.anchor)
+            BasicStyle.COLOR_SOURCE_CUSTOM_ANCHOR ->
+                findAnchorTextView(basicStyle.statusBarColorAnchorId)
+            else -> getClockView() as? TextView
+        } ?: getClockView() as? TextView ?: return
+
+        if (colorMonitorSource == BasicStyle.COLOR_SOURCE_ANCHOR) {
+            TextViewColorMonitor.hook()
+        } else {
+            ClockColorMonitor.hook()
+        }
+
+        if (colorMonitorView === target) return
+        (colorMonitorView as? TextView)?.let {
+            ClockColorMonitor.setListener(it, null)
+            TextViewColorMonitor.setListener(it, null)
+        }
+        colorMonitorView = target
+        if (colorMonitorSource == BasicStyle.COLOR_SOURCE_ANCHOR) {
+            TextViewColorMonitor.setListener(target, colorChangeListener)
+        } else {
+            ClockColorMonitor.setListener(target, colorChangeListener)
+        }
+    }
+
+    private fun findAnchorTextView(anchor: String?): TextView? {
+        if (anchor.isNullOrBlank()) return null
+        val anchorId = context.resources.getIdentifier(anchor, "id", context.packageName)
+        if (anchorId == 0) return null
+        return statusBarView.findViewById(anchorId) as? TextView
+    }
+
     private fun setUserShowClock(show: Boolean) {
         if (userShowClock == show) return
         userShowClock = show
@@ -278,6 +320,9 @@ class StatusBarViewController(
         override fun onGlobalLayout() {
             if (clockView == null) {
                 setupDoubleTapHandlers()
+            }
+            if (colorMonitorEnabled && colorMonitorView == null) {
+                updateColorMonitor(currentLyricStyle.basicStyle)
             }
             val shouldLyricViewVisible = lyricView.isVisible
 
