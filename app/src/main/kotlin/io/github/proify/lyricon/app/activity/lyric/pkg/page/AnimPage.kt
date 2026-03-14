@@ -30,6 +30,7 @@ import io.github.proify.lyricon.app.compose.preference.rememberStringPreference
 import io.github.proify.lyricon.lyric.style.AnimStyle
 import io.github.proify.lyricon.lyric.view.yoyo.YoYoPresets
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 
 @Composable
@@ -42,11 +43,15 @@ fun AnimPage(
             .fillMaxWidth()
             .fillMaxHeight()
     ) {
-        val registry = YoYoPresets.registry
-        val keys = registry.keys.toList()
+        val enterKeys = YoYoPresets.inRegistry.keys.toList()
+        val exitKeys = YoYoPresets.outRegistry.keys.toList()
         var selectedId by rememberStringPreference(
-            sharedPreferences, "lyric_style_anim_id",
-            AnimStyle.Defaults.ID
+            sharedPreferences, "lyric_style_anim_enter_id",
+            AnimStyle.Defaults.ENTER_ID
+        )
+        var selectedOutId by rememberStringPreference(
+            sharedPreferences, "lyric_style_anim_exit_id",
+            AnimStyle.Defaults.EXIT_ID
         )
 
         LazyColumn(
@@ -76,19 +81,46 @@ fun AnimPage(
                 }
             }
 
-            item("list") {
+            item("enter_list") {
+                SmallTitle(
+                    modifier = Modifier.padding(start = 32.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
+                    text = stringResource(R.string.item_anim_enter),
+                )
                 Card(
                     modifier = Modifier
-                        .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 16.dp)
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                         .fillMaxWidth(),
                 ) {
                     val context = LocalContext.current
-                    keys.forEach { key ->
+                    enterKeys.forEach { key ->
                         SuperCheckbox(
                             title = YoYoTranslates.getLabel(context, key),
                             checked = selectedId == key,
                             onCheckedChange = {
                                 selectedId = key
+                            }
+                        )
+                    }
+                }
+            }
+
+            item("exit_list") {
+                SmallTitle(
+                    modifier = Modifier.padding(start = 32.dp, end = 16.dp, bottom = 8.dp),
+                    text = stringResource(R.string.item_anim_exit),
+                )
+                Card(
+                    modifier = Modifier
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                        .fillMaxWidth(),
+                ) {
+                    val context = LocalContext.current
+                    exitKeys.forEach { key ->
+                        SuperCheckbox(
+                            title = YoYoTranslates.getLabel(context, key),
+                            checked = selectedOutId == key,
+                            onCheckedChange = {
+                                selectedOutId = key
                             }
                         )
                     }

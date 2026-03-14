@@ -168,6 +168,8 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
                         val activePackage = this@LyricViewController.activePackage
                         this.activePackage = activePackage
                         coverFile = NotificationCoverHelper.getCoverFile(activePackage)
+                        coverMinTimestamp = 0L
+                        strategy?.updateContent()
                         post { providerLogo = provider?.logo }
                     }
                 }
@@ -175,6 +177,10 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
                 MSG_SONG_CHANGED -> {
                     val song = msg.obj as? Song
                     view.setSong(song)
+                    view.logoView.apply {
+                        coverMinTimestamp = System.currentTimeMillis()
+                        strategy?.updateContent()
+                    }
                 }
                 MSG_PLAYBACK_STATE -> view.setPlaying(msg.arg1 == 1)
                 MSG_POSITION -> {

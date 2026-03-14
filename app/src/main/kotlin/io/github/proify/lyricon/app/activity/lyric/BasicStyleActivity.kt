@@ -31,6 +31,8 @@ import io.github.proify.lyricon.app.compose.preference.InputPreference
 import io.github.proify.lyricon.app.compose.preference.InputType
 import io.github.proify.lyricon.app.compose.preference.RectInputPreference
 import io.github.proify.lyricon.app.compose.preference.SwitchPreference
+import io.github.proify.lyricon.app.compose.preference.rememberBooleanPreference
+import io.github.proify.lyricon.app.compose.preference.rememberIntPreference
 import io.github.proify.lyricon.app.compose.preference.rememberStringPreference
 import io.github.proify.lyricon.app.util.LyricPrefs
 import io.github.proify.lyricon.app.util.Utils
@@ -204,9 +206,134 @@ class BasicLyricStyleActivity : AbstractLyricActivity() {
                         title = stringResource(R.string.item_base_lockscreen_hidden),
                     )
 
+                    SwitchPreference(
+                        preferences,
+                        "lyric_style_base_double_tap_switch_clock",
+                        defaultValue = BasicStyle.Defaults.DOUBLE_TAP_SWITCH_CLOCK,
+                        startAction = {
+                            IconActions(painterResource(R.drawable.ic_view_stream))
+                        },
+                        title = stringResource(R.string.item_base_double_tap_switch_clock),
+                    )
+
                     HideWhenNoLyric()
                     HideWhenNoUpdate()
                     HideWhenKeywords()
+                }
+            }
+
+            item(key = "oled") {
+                Card(
+                    modifier = Modifier
+                        .padding(start = 16.dp, top = 16.dp, end = 16.dp)
+                        .fillMaxWidth(),
+                ) {
+                    val oledEnabled = rememberBooleanPreference(
+                        preferences,
+                        "lyric_style_base_oled_shift_enable",
+                        BasicStyle.Defaults.OLED_SHIFT_ENABLED
+                    )
+
+                    val oledMode = rememberIntPreference(
+                        preferences,
+                        "lyric_style_base_oled_shift_mode",
+                        BasicStyle.Defaults.OLED_SHIFT_MODE
+                    )
+
+                    SwitchPreference(
+                        preferences,
+                        "lyric_style_base_oled_shift_enable",
+                        defaultValue = BasicStyle.Defaults.OLED_SHIFT_ENABLED,
+                        startAction = {
+                            IconActions(painterResource(R.drawable.ic_routine))
+                        },
+                        title = stringResource(R.string.item_base_oled_shift_enable),
+                    )
+
+                    val optionKeys = listOf(
+                        BasicStyle.OLED_SHIFT_MODE_ON_LYRIC_CHANGE,
+                        BasicStyle.OLED_SHIFT_MODE_INTERVAL,
+                        BasicStyle.OLED_SHIFT_MODE_RANDOM_INTERVAL
+                    )
+
+                    val options = listOf(
+                        SpinnerEntry(title = stringResource(R.string.option_oled_shift_on_lyric_change)),
+                        SpinnerEntry(title = stringResource(R.string.option_oled_shift_interval)),
+                        SpinnerEntry(title = stringResource(R.string.option_oled_shift_random_interval)),
+                    )
+
+                    val selectedIndex = optionKeys.indexOf(oledMode.value).coerceAtLeast(0)
+
+                    SuperSpinner(
+                        startAction = {
+                            IconActions(painterResource(R.drawable.ic_routine))
+                        },
+                        title = stringResource(R.string.item_base_oled_shift_mode),
+                        items = options,
+                        selectedIndex = selectedIndex,
+                        onSelectedIndexChange = {
+                            oledMode.value = optionKeys[it]
+                        },
+                        enabled = oledEnabled.value
+                    )
+
+                    InputPreference(
+                        sharedPreferences = preferences,
+                        key = "lyric_style_base_oled_shift_range",
+                        title = stringResource(R.string.item_base_oled_shift_range),
+                        inputType = InputType.DOUBLE,
+                        minValue = 0.0,
+                        maxValue = 20.0,
+                        leftAction = {
+                            IconActions(painterResource(R.drawable.ic_space_bar))
+                        },
+                        enabled = oledEnabled.value
+                    )
+
+                    InputPreference(
+                        sharedPreferences = preferences,
+                        key = "lyric_style_base_oled_shift_interval",
+                        title = stringResource(R.string.item_base_oled_shift_interval),
+                        inputType = InputType.INTEGER,
+                        minValue = 1.0,
+                        maxValue = 3600.0,
+                        leftAction = {
+                            IconActions(painterResource(R.drawable.ic_routine))
+                        },
+                        enabled = oledEnabled.value && oledMode.value == BasicStyle.OLED_SHIFT_MODE_INTERVAL,
+                        isTimeUnit = true,
+                        formatMultiplier = 1000
+                    )
+
+                    InputPreference(
+                        sharedPreferences = preferences,
+                        key = "lyric_style_base_oled_shift_random_min",
+                        title = stringResource(R.string.item_base_oled_shift_random_min),
+                        inputType = InputType.INTEGER,
+                        minValue = 1.0,
+                        maxValue = 3600.0,
+                        leftAction = {
+                            IconActions(painterResource(R.drawable.ic_routine))
+                        },
+                        enabled = oledEnabled.value && oledMode.value == BasicStyle.OLED_SHIFT_MODE_RANDOM_INTERVAL,
+                        isTimeUnit = true,
+                        formatMultiplier = 1000
+                    )
+
+                    InputPreference(
+                        sharedPreferences = preferences,
+                        key = "lyric_style_base_oled_shift_random_max",
+                        title = stringResource(R.string.item_base_oled_shift_random_max),
+                        inputType = InputType.INTEGER,
+                        minValue = 1.0,
+                        maxValue = 3600.0,
+                        leftAction = {
+                            IconActions(painterResource(R.drawable.ic_routine))
+                        },
+                        enabled = oledEnabled.value && oledMode.value == BasicStyle.OLED_SHIFT_MODE_RANDOM_INTERVAL,
+                        isTimeUnit = true,
+                        formatMultiplier = 1000
+                    )
                 }
             }
 

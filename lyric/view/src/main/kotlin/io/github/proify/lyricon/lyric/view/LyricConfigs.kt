@@ -27,7 +27,8 @@ data class RichLyricLineConfig(
     var fadingEdgeLength: Int = 10,
     var placeholderFormat: String = PlaceholderFormat.NAME_ARTIST,
     var enableAnim: Boolean = false,
-    var animId: String = "stack_flow"
+    var animInId: String = "in_fade_in_up",
+    var animOutId: String = "out_fade_out_up"
 )
 
 object PlaceholderFormat {

@@ -30,7 +30,14 @@ data class BasicStyle(
     var noLyricHideTimeout: Int = Defaults.NO_LYRIC_HIDE_TIMEOUT,
     var noUpdateHideTimeout: Int = Defaults.NO_UPDATE_HIDE_TIMEOUT,
     var keywordHideTimeout: Int = Defaults.KEYWORD_HIDE_TIMEOUT,
-    var keywordHideMatches: List<String> = Defaults.KEYWORD_HIDE_MATCH
+    var keywordHideMatches: List<String> = Defaults.KEYWORD_HIDE_MATCH,
+    var doubleTapSwitchClock: Boolean = Defaults.DOUBLE_TAP_SWITCH_CLOCK,
+    var oledShiftEnabled: Boolean = Defaults.OLED_SHIFT_ENABLED,
+    var oledShiftMode: Int = Defaults.OLED_SHIFT_MODE,
+    var oledShiftRangeDp: Float = Defaults.OLED_SHIFT_RANGE_DP,
+    var oledShiftIntervalSec: Int = Defaults.OLED_SHIFT_INTERVAL_SEC,
+    var oledShiftRandomIntervalMinSec: Int = Defaults.OLED_SHIFT_RANDOM_MIN_SEC,
+    var oledShiftRandomIntervalMaxSec: Int = Defaults.OLED_SHIFT_RANDOM_MAX_SEC
 ) : AbstractStyle(), Parcelable {
 
     @IgnoredOnParcel
@@ -98,6 +105,35 @@ data class BasicStyle(
                 keywordHideMatches = it ?: emptyList()
                 keywordsHidePattern = null
             }
+
+        doubleTapSwitchClock = preferences.getBoolean(
+            "lyric_style_base_double_tap_switch_clock",
+            Defaults.DOUBLE_TAP_SWITCH_CLOCK
+        )
+        oledShiftEnabled = preferences.getBoolean(
+            "lyric_style_base_oled_shift_enable",
+            Defaults.OLED_SHIFT_ENABLED
+        )
+        oledShiftMode = preferences.getInt(
+            "lyric_style_base_oled_shift_mode",
+            Defaults.OLED_SHIFT_MODE
+        )
+        oledShiftRangeDp = preferences.getFloat(
+            "lyric_style_base_oled_shift_range",
+            Defaults.OLED_SHIFT_RANGE_DP
+        )
+        oledShiftIntervalSec = preferences.getInt(
+            "lyric_style_base_oled_shift_interval",
+            Defaults.OLED_SHIFT_INTERVAL_SEC
+        )
+        oledShiftRandomIntervalMinSec = preferences.getInt(
+            "lyric_style_base_oled_shift_random_min",
+            Defaults.OLED_SHIFT_RANDOM_MIN_SEC
+        )
+        oledShiftRandomIntervalMaxSec = preferences.getInt(
+            "lyric_style_base_oled_shift_random_max",
+            Defaults.OLED_SHIFT_RANDOM_MAX_SEC
+        )
     }
 
     override fun onWrite(editor: SharedPreferences.Editor) {
@@ -122,6 +158,13 @@ data class BasicStyle(
             keywordHideTimeout
         )
         editor.putString("lyric_style_base_timeout_hide_keywords", keywordHideMatches.toJson())
+        editor.putBoolean("lyric_style_base_double_tap_switch_clock", doubleTapSwitchClock)
+        editor.putBoolean("lyric_style_base_oled_shift_enable", oledShiftEnabled)
+        editor.putInt("lyric_style_base_oled_shift_mode", oledShiftMode)
+        editor.putFloat("lyric_style_base_oled_shift_range", oledShiftRangeDp)
+        editor.putInt("lyric_style_base_oled_shift_interval", oledShiftIntervalSec)
+        editor.putInt("lyric_style_base_oled_shift_random_min", oledShiftRandomIntervalMinSec)
+        editor.putInt("lyric_style_base_oled_shift_random_max", oledShiftRandomIntervalMaxSec)
     }
 
     object Defaults {
@@ -138,10 +181,20 @@ data class BasicStyle(
         const val NO_UPDATE_HIDE_TIMEOUT = 0
         const val KEYWORD_HIDE_TIMEOUT: Int = 0
         val KEYWORD_HIDE_MATCH: List<String> = listOf()
+        const val DOUBLE_TAP_SWITCH_CLOCK: Boolean = false
+        const val OLED_SHIFT_ENABLED: Boolean = false
+        const val OLED_SHIFT_MODE: Int = OLED_SHIFT_MODE_ON_LYRIC_CHANGE
+        const val OLED_SHIFT_RANGE_DP: Float = 2.0f
+        const val OLED_SHIFT_INTERVAL_SEC: Int = 120
+        const val OLED_SHIFT_RANDOM_MIN_SEC: Int = 60
+        const val OLED_SHIFT_RANDOM_MAX_SEC: Int = 180
     }
 
     companion object {
         const val INSERTION_ORDER_BEFORE: Int = 0
         const val INSERTION_ORDER_AFTER: Int = 1
+        const val OLED_SHIFT_MODE_ON_LYRIC_CHANGE: Int = 0
+        const val OLED_SHIFT_MODE_INTERVAL: Int = 1
+        const val OLED_SHIFT_MODE_RANDOM_INTERVAL: Int = 2
     }
 }

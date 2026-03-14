@@ -11,6 +11,7 @@ import android.annotation.SuppressLint
 import android.app.KeyguardManager
 import android.content.Context
 import android.os.Handler
+import android.os.SystemClock
 import android.util.Log
 import android.view.Gravity
 import android.view.View
@@ -32,6 +33,8 @@ import io.github.proify.lyricon.lyric.view.visibleIfChanged
 import io.github.proify.lyricon.statusbarlyric.StatusBarLyric.LyricType.NONE
 import io.github.proify.lyricon.statusbarlyric.StatusBarLyric.LyricType.SONG
 import io.github.proify.lyricon.statusbarlyric.StatusBarLyric.LyricType.TEXT
+import kotlin.math.max
+import kotlin.random.Random
 
 @SuppressLint("ViewConstructor")
 class StatusBarLyric(
@@ -85,6 +88,7 @@ class StatusBarLyric(
     private var currentStyle: LyricStyle = initialStyle
     private var isPlaying: Boolean = false
     private var isOplusCapsuleShowing: Boolean = false
+    private var userHideLyric: Boolean = false
 
     // 上一次 Logo gravity，用于避免重复重排
     private var lastLogoGravity: Int = -114
@@ -110,6 +114,18 @@ class StatusBarLyric(
             field = value
             updateVisibility()
         }
+
+    var onPlayingChanged: ((Boolean) -> Unit)? = null
+
+    private val driftHandler: Handler = Handler(context.mainLooper)
+    private var driftTask: Runnable? = null
+    private var driftRandom: Random = Random(SystemClock.uptimeMillis().toInt())
+    private var driftEnabled: Boolean = BasicStyle.Defaults.OLED_SHIFT_ENABLED
+    private var driftMode: Int = BasicStyle.Defaults.OLED_SHIFT_MODE
+    private var driftRangeDp: Float = BasicStyle.Defaults.OLED_SHIFT_RANGE_DP
+    private var driftIntervalSec: Int = BasicStyle.Defaults.OLED_SHIFT_INTERVAL_SEC
+    private var driftRandomIntervalMinSec: Int = BasicStyle.Defaults.OLED_SHIFT_RANDOM_MIN_SEC
+    private var driftRandomIntervalMaxSec: Int = BasicStyle.Defaults.OLED_SHIFT_RANDOM_MAX_SEC
 
     // --- 系统 / 辅助组件 ---
 
@@ -151,6 +167,7 @@ class StatusBarLyric(
 
             override fun onLyricTextChanged(old: String, new: String) {
                 currentLyric = new
+                applyDriftOnLyricChange()
                 refreshLyricTimeoutState()
             }
 
@@ -159,6 +176,7 @@ class StatusBarLyric(
                 removes: List<IRichLyricLine>
             ) {
                 currentLyric = news.lastOrNull()?.text
+                applyDriftOnLyricChange()
                 refreshLyricTimeoutState()
             }
         }
@@ -194,6 +212,7 @@ class StatusBarLyric(
         updateLogoLocation()
         textView.applyStyle(style)
         updateLayoutConfig(style)
+        updateDriftConfig(style.basicStyle)
 
         refreshLyricTimeoutState()
         requestLayout()
@@ -216,15 +235,19 @@ class StatusBarLyric(
 
         lastPlaying = playing
         isPlaying = playing
+        onPlayingChanged?.invoke(playing)
 
         if (!playing) {
             textView.reset()
+            setUserHideLyric(false)
+            resetDrift()
         } else {
             when (lyricType) {
                 NONE -> Unit
                 SONG -> setSong(lastSong)
                 TEXT -> setText(lastText)
             }
+            scheduleDriftIfNeeded()
         }
 
         refreshLyricTimeoutState()
@@ -240,6 +263,7 @@ class StatusBarLyric(
                 && textView.shouldShow()
                 && !lyricTimedOut
                 && !isDisabledVisible
+                && !userHideLyric
 
         visibleIfChanged = shouldShow
 
@@ -295,6 +319,12 @@ class StatusBarLyric(
         logoView.oplusCapsuleShowing = visible
     }
 
+    fun setUserHideLyric(hide: Boolean) {
+        if (userHideLyric == hide) return
+        userHideLyric = hide
+        updateVisibility()
+    }
+
     // --- 内部逻辑 ---
 
     private fun applyInitialStyle(style: LyricStyle) {
@@ -302,6 +332,7 @@ class StatusBarLyric(
         logoView.applyStyle(style)
         textView.applyStyle(style)
         updateLayoutConfig(style)
+        updateDriftConfig(style.basicStyle)
     }
 
     private fun updateLogoLocation() {
@@ -369,6 +400,81 @@ class StatusBarLyric(
     private fun triggerSingleTransition() {
         singleLayoutTransition.enableTransitionType(LayoutTransition.CHANGING)
         layoutTransition = singleLayoutTransition
+    }
+
+    private fun updateDriftConfig(style: BasicStyle) {
+        driftEnabled = style.oledShiftEnabled
+        driftMode = style.oledShiftMode
+        driftRangeDp = style.oledShiftRangeDp
+        driftIntervalSec = style.oledShiftIntervalSec
+        driftRandomIntervalMinSec = style.oledShiftRandomIntervalMinSec
+        driftRandomIntervalMaxSec = style.oledShiftRandomIntervalMaxSec
+        if (!driftEnabled) {
+            resetDrift()
+        } else {
+            scheduleDriftIfNeeded()
+        }
+    }
+
+    private fun applyDriftOnLyricChange() {
+        if (!driftEnabled || driftMode != BasicStyle.OLED_SHIFT_MODE_ON_LYRIC_CHANGE) return
+        if (!isPlaying) return
+        applyRandomDrift()
+    }
+
+    private fun scheduleDriftIfNeeded() {
+        cancelDriftSchedule()
+        if (!driftEnabled || !isPlaying) return
+        when (driftMode) {
+            BasicStyle.OLED_SHIFT_MODE_INTERVAL -> scheduleDrift(driftIntervalSec * 1000L)
+            BasicStyle.OLED_SHIFT_MODE_RANDOM_INTERVAL -> scheduleDrift(nextRandomIntervalMs())
+        }
+    }
+
+    private fun scheduleDrift(delayMs: Long) {
+        if (delayMs <= 0L) return
+        val task = Runnable {
+            if (!driftEnabled || !isPlaying) return@Runnable
+            applyRandomDrift()
+            when (driftMode) {
+                BasicStyle.OLED_SHIFT_MODE_INTERVAL -> scheduleDrift(driftIntervalSec * 1000L)
+                BasicStyle.OLED_SHIFT_MODE_RANDOM_INTERVAL -> scheduleDrift(nextRandomIntervalMs())
+            }
+        }
+        driftTask = task
+        driftHandler.postDelayed(task, delayMs)
+    }
+
+    private fun nextRandomIntervalMs(): Long {
+        val minSec = max(0, driftRandomIntervalMinSec)
+        val maxSec = max(minSec, driftRandomIntervalMaxSec)
+        val next = if (maxSec == minSec) minSec else driftRandom.nextInt(minSec, maxSec + 1)
+        return next * 1000L
+    }
+
+    private fun applyRandomDrift() {
+        val rangeDp = driftRangeDp.coerceAtLeast(0f)
+        val rangePx = rangeDp.dp.toFloat()
+        if (rangePx <= 0f) {
+            translationX = 0f
+            translationY = 0f
+            return
+        }
+        val offsetX = (driftRandom.nextFloat() * 2f - 1f) * rangePx
+        val offsetY = (driftRandom.nextFloat() * 2f - 1f) * rangePx
+        translationX = offsetX
+        translationY = offsetY
+    }
+
+    private fun resetDrift() {
+        cancelDriftSchedule()
+        translationX = 0f
+        translationY = 0f
+    }
+
+    private fun cancelDriftSchedule() {
+        driftTask?.let { driftHandler.removeCallbacks(it) }
+        driftTask = null
     }
 
     private fun refreshLyricTimeoutState() {

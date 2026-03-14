@@ -68,6 +68,8 @@
     <string name="tab_style_text">文字</string>
     <string name="tab_style_icon">图标</string>
     <string name="tab_style_anim">动画</string>
+    <string name="item_anim_enter">入场动画</string>
+    <string name="item_anim_exit">出场动画</string>
     <string name="item_text_size">大小</string>
     <string name="item_text_margins">边距</string>
     <string name="item_text_paddings">内边距</string>
@@ -140,6 +142,16 @@
     <string name="module_tag_translation">翻译</string>
     <string name="no_provider_available">没有可用的歌词提供者</string>
     <string name="item_base_lockscreen_hidden">在锁屏界面隐藏</string>
+    <string name="item_base_double_tap_switch_clock">双击切换时钟/歌词</string>
+    <string name="item_base_oled_shift_enable">OLED 防烧屏漂移</string>
+    <string name="item_base_oled_shift_mode">漂移模式</string>
+    <string name="item_base_oled_shift_range">漂移范围</string>
+    <string name="item_base_oled_shift_interval">漂移间隔</string>
+    <string name="item_base_oled_shift_random_min">随机间隔最小值</string>
+    <string name="item_base_oled_shift_random_max">随机间隔最大值</string>
+    <string name="option_oled_shift_on_lyric_change">歌词切换时漂移</string>
+    <string name="option_oled_shift_interval">定时漂移</string>
+    <string name="option_oled_shift_random_interval">区间随机漂移</string>
     <string name="option_provider_list_full">完整</string>
     <string name="option_provider_list_short">精简</string>
     <string name="no_query_app_permission">请授予读取应用权限</string>

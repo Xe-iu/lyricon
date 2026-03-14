@@ -75,11 +75,13 @@ class SuperLogo(context: Context) : ImageView(context) {
         private const val TEXT_SIZE_MULTIPLIER = 1.2f
         private const val DEFAULT_TEXT_SIZE_DP = 14
         private const val SQUIRCLE_CORNER_RADIUS_DP = 4
+        private const val COVER_TIMESTAMP_GRACE_MS = 3000L
         const val VIEW_TAG: String = "lyricon:logo_view"
         const val TAG = "SuperLogo"
     }
 
     var coverFile: File? = null
+    var coverMinTimestamp: Long = 0L
 
     var oplusCapsuleShowing: Boolean = false
         set(value) {
@@ -479,12 +481,16 @@ class SuperLogo(context: Context) : ImageView(context) {
             if (imageTintList != null) imageTintList = null
 
             val coverFile = coverFile
-            if (coverFile == null || !coverFile.exists()) {
+            val lastModified = coverFile?.lastModified() ?: 0L
+            val isStale =
+                coverMinTimestamp > 0L && (lastModified + COVER_TIMESTAMP_GRACE_MS) < coverMinTimestamp
+            if (coverFile == null || !coverFile.exists() || isStale) {
                 setImageDrawable(null)
                 isEffective = false
                 lastFileSignature = null
             } else {
-                val signature = coverFile.lastModified().toString()
+                val signature =
+                    "${coverFile.lastModified()}_${coverFile.length()}_${width}_${height}"
 
                 // 只有文件变动或未初始化时才重新加载
                 if (signature != lastFileSignature || drawable == null) {

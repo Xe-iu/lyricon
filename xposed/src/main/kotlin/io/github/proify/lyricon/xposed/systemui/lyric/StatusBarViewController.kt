@@ -9,6 +9,8 @@ package io.github.proify.lyricon.xposed.systemui.lyric
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
@@ -46,6 +48,11 @@ class StatusBarViewController(
     private var lastInsertionOrder = -1
     private var internalRemoveLyricViewFlag = false
     private var lastHighlightView: View? = null
+    private var userShowClock = false
+    private var doubleTapSwitchEnabled = false
+    private var clockView: TextView? = null
+    private var lyricDoubleTapDetector: GestureDetector? = null
+    private var clockDoubleTapDetector: GestureDetector? = null
 
     private var colorMonitorView: View? = null
 
@@ -55,6 +62,13 @@ class StatusBarViewController(
         statusBarView.viewTreeObserver.addOnGlobalLayoutListener(onGlobalLayoutListener)
         lyricView.addOnAttachStateChangeListener(lyricAttachListener)
         ScreenStateMonitor.addListener(this)
+        lyricView.onPlayingChanged = { playing ->
+            if (!playing) {
+                setUserShowClock(false)
+            }
+        }
+
+        setupDoubleTapHandlers()
 
 
         val onColorChangeListener = object : OnColorChangeListener {
@@ -96,6 +110,10 @@ class StatusBarViewController(
     fun updateLyricStyle(lyricStyle: LyricStyle) {
         this.currentLyricStyle = lyricStyle
         val basicStyle = lyricStyle.basicStyle
+        doubleTapSwitchEnabled = basicStyle.doubleTapSwitchClock
+        if (!doubleTapSwitchEnabled) {
+            setUserShowClock(false)
+        }
 
         val needUpdateLocation = lastAnchor != basicStyle.anchor
                 || lastInsertionOrder != basicStyle.insertionOrder
@@ -162,6 +180,62 @@ class StatusBarViewController(
     private fun createLyricView(style: LyricStyle) =
         StatusBarLyric(context, style, getClockView() as? TextView)
 
+    private fun setupDoubleTapHandlers() {
+        clockView = getClockView() as? TextView
+        val clock = clockView ?: return
+
+        if (lyricDoubleTapDetector == null) {
+            lyricDoubleTapDetector = GestureDetector(
+                context,
+                object : GestureDetector.SimpleOnGestureListener() {
+                    override fun onDoubleTap(e: MotionEvent): Boolean {
+                        if (!doubleTapSwitchEnabled || !LyricViewController.isPlaying) return false
+                        setUserShowClock(true)
+                        return true
+                    }
+                }
+            )
+        }
+
+        if (clockDoubleTapDetector == null) {
+            clockDoubleTapDetector = GestureDetector(
+                context,
+                object : GestureDetector.SimpleOnGestureListener() {
+                    override fun onDoubleTap(e: MotionEvent): Boolean {
+                        if (!doubleTapSwitchEnabled || !LyricViewController.isPlaying) return false
+                        setUserShowClock(false)
+                        return true
+                    }
+                }
+            )
+        }
+
+        lyricView.isClickable = true
+        lyricView.setOnTouchListener { _, event ->
+            if (!doubleTapSwitchEnabled) return@setOnTouchListener false
+            lyricDoubleTapDetector?.onTouchEvent(event) ?: false
+        }
+
+        clock.isClickable = true
+        clock.setOnTouchListener { _, event ->
+            if (!doubleTapSwitchEnabled) return@setOnTouchListener false
+            clockDoubleTapDetector?.onTouchEvent(event) ?: false
+        }
+    }
+
+    private fun setUserShowClock(show: Boolean) {
+        if (userShowClock == show) return
+        userShowClock = show
+        lyricView.setUserHideLyric(show)
+        lyricView.updateVisibility()
+        if (show) {
+            visibilityController.applyVisibilityRules(
+                rules = currentLyricStyle.basicStyle.visibilityRules,
+                isPlaying = false
+            )
+        }
+    }
+
     fun highlightView(idName: String?) {
         lastHighlightView?.background = null
         if (idName.isNullOrBlank()) return
@@ -183,6 +257,9 @@ class StatusBarViewController(
         private var lastVisible: Boolean? = null
 
         override fun onGlobalLayout() {
+            if (clockView == null) {
+                setupDoubleTapHandlers()
+            }
             val shouldLyricViewVisible = lyricView.isVisible
 
             var visible = LyricViewController.isPlaying && when {
@@ -195,9 +272,9 @@ class StatusBarViewController(
 
             visibilityController.applyVisibilityRules(
                 rules = currentLyricStyle.basicStyle.visibilityRules,
-                isPlaying = visible
+                isPlaying = if (userShowClock) false else visible
             )
-            lastVisible = visible
+            lastVisible = if (userShowClock) false else visible
             //YLog.info("applyVisibilityRules: $visible")
         }
     }

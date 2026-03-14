@@ -149,7 +149,7 @@ open class LyricPlayerView(
             }
             val old = textRecycleLineView.line
 
-            val preset = YoYoPresets.getById(styleConfig.animId)
+            val preset = YoYoPresets.getByIds(styleConfig.animOutId, styleConfig.animInId)
 
             fun buildLine(text: String): RichLyricLine {
                 val lines = text.lines()
@@ -323,7 +323,9 @@ open class LyricPlayerView(
 
             if (recycleView != null) {
 
-                val preset by lazy { YoYoPresets.getById(styleConfig.animId) }
+                val preset by lazy {
+                    YoYoPresets.getByIds(styleConfig.animOutId, styleConfig.animInId)
+                }
                 if (styleConfig.enableAnim && preset != null) {
                     activeLyricLines[0] = newLine
                     recycleView.beginAnimationTransition()

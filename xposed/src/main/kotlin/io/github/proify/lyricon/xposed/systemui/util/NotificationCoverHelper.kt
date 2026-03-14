@@ -57,7 +57,7 @@ object NotificationCoverHelper {
 
         val listenerClass = findNotificationListenerClass(classLoader)
         if (listenerClass == null) {
-            YLog.error("未找到通知监听器类,无法 Hook 通知")
+            YLog.error("Failed to find notification listener class; cannot hook")
             return
         }
 
@@ -68,12 +68,22 @@ object NotificationCoverHelper {
                 NotificationPostedHook()
             )
         } catch (e: Throwable) {
-            YLog.error("Hook 通知监听器失败", e)
+            YLog.error("Hook notification listener failed", e)
         }
     }
 
     fun getCoverFile(packageName: String): File =
         File(Directory.getPackageDataDir(packageName), COVER_FILE_NAME)
+
+    private fun clearCover(packageName: String) {
+        val coverFile = getCoverFile(packageName)
+        runCatching {
+            if (coverFile.exists()) coverFile.delete()
+        }
+        for (listener in listeners) {
+            listener.onCoverUpdated(packageName, coverFile)
+        }
+    }
 
     fun interface OnCoverUpdateListener {
         fun onCoverUpdated(packageName: String, coverFile: File)
@@ -95,12 +105,11 @@ object NotificationCoverHelper {
 
             if (!isMediaStyle(notification)) return
 
-//            for (key in notification.extras.keySet()) {
-//                val value = notification.extras.get(key)
-//                Log.d("NotificationExtras", "$key = $value")
-//            }
-
-            val icon: Icon = notification.getLargeIcon() ?: return
+            val icon: Icon? = notification.getLargeIcon()
+            if (icon == null) {
+                clearCover(packageName)
+                return
+            }
 
             saveCoverIcon(icon, packageName)
         }
@@ -115,13 +124,14 @@ object NotificationCoverHelper {
         private fun saveCoverIcon(icon: Icon, packageName: String) {
             val context: Context? = AndroidAppHelper.currentApplication()
             if (context == null) {
-                YLog.warn("无法获取上下文")
+                YLog.warn("Unable to get context for cover extraction")
                 return
             }
 
             val drawable = icon.loadDrawable(context)
             if (drawable == null) {
-                YLog.warn("无法加载封面图标")
+                YLog.warn("Unable to load cover drawable")
+                clearCover(packageName)
                 return
             }
 
@@ -129,6 +139,7 @@ object NotificationCoverHelper {
             val coverFile = getCoverFile(packageName)
 
             bitmap.saveTo(coverFile)
+            runCatching { coverFile.setLastModified(System.currentTimeMillis()) }
 
             for (listener in listeners) {
                 listener.onCoverUpdated(packageName, coverFile)
