@@ -29,6 +29,10 @@ object TranslationDebugReporter {
     private var targetLanguage: String? = null
     private var songName: String? = null
     private var songArtist: String? = null
+    private var lastRequestDurationMs: Long? = null
+    private var lastPromptTokens: Int? = null
+    private var lastCompletionTokens: Int? = null
+    private var lastTotalTokens: Int? = null
     private var updatedAt: Long = 0L
 
     fun initialize(channel: YukiHookDataChannel.NameSpace) {
@@ -69,6 +73,20 @@ object TranslationDebugReporter {
         emit()
     }
 
+    fun updateRequestStats(
+        durationMs: Long?,
+        promptTokens: Int?,
+        completionTokens: Int?,
+        totalTokens: Int?
+    ) {
+        lastRequestDurationMs = durationMs
+        lastPromptTokens = promptTokens
+        lastCompletionTokens = completionTokens
+        lastTotalTokens = totalTokens
+        updatedAt = SystemClock.uptimeMillis()
+        emit()
+    }
+
     private fun emit() {
         val snapshot = TranslationDebugInfo(
             state = state,
@@ -78,6 +96,10 @@ object TranslationDebugReporter {
             targetLanguage = targetLanguage,
             songName = songName,
             songArtist = songArtist,
+            lastRequestDurationMs = lastRequestDurationMs,
+            lastPromptTokens = lastPromptTokens,
+            lastCompletionTokens = lastCompletionTokens,
+            lastTotalTokens = lastTotalTokens,
             updatedAt = updatedAt,
             logLines = logBuffer.toList()
         )

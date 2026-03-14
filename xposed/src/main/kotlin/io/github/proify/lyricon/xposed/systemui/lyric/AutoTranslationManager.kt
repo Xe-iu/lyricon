@@ -7,6 +7,7 @@
 package io.github.proify.lyricon.xposed.systemui.lyric
 
 import android.util.Log
+import android.os.SystemClock
 import io.github.proify.android.extensions.json
 import io.github.proify.lyricon.lyric.model.Song
 import io.github.proify.lyricon.lyric.model.extensions.deepCopy
@@ -147,7 +148,7 @@ object AutoTranslationManager {
         model: String,
         targetLanguage: String,
         text: String
-    ): String? {
+    ): ResponseResult? {
         ensureCacheLoaded()
         val key = buildCacheKey(provider, model, targetLanguage, text)
         synchronized(lock) {
@@ -392,7 +393,15 @@ object AutoTranslationManager {
 
     @Serializable
     private data class OpenAiResponse(
-        val choices: List<OpenAiChoice> = emptyList()
+        val choices: List<OpenAiChoice> = emptyList(),
+        val usage: OpenAiUsage? = null
+    )
+
+    @Serializable
+    private data class OpenAiUsage(
+        val prompt_tokens: Int? = null,
+        val completion_tokens: Int? = null,
+        val total_tokens: Int? = null
     )
 
     @Serializable
@@ -419,7 +428,7 @@ object AutoTranslationManager {
 
         Log.i(TAG, "requestOpenAiCompatibleTranslation: request=$request")
 
-        val responseText = executePost(
+        val response = executePost(
             url = settings.baseUrl.trim(),
             body = json.encodeToString(request),
             headers = mapOf(
@@ -428,9 +437,21 @@ object AutoTranslationManager {
             ),
             logTag = settings.provider
         ) ?: return null
+        val responseText = response.text ?: return null
 
         val content = runCatching {
-            json.decodeFromString<OpenAiResponse>(responseText)
+            json.decodeFromString<OpenAiResponse>(responseText).also { parsed ->
+                val usage = parsed.usage
+                TranslationDebugReporter.updateRequestStats(
+                    durationMs = response.durationMs,
+                    promptTokens = usage?.prompt_tokens,
+                    completionTokens = usage?.completion_tokens,
+                    totalTokens = usage?.total_tokens
+                )
+                TranslationDebugReporter.appendLog(
+                    "openai response: ${response.durationMs}ms, tokens=${usage?.total_tokens ?: "-"}"
+                )
+            }
                 .choices.firstOrNull()?.message?.content
         }.getOrNull().orEmpty()
 
@@ -455,7 +476,14 @@ object AutoTranslationManager {
 
     @Serializable
     private data class ClaudeResponse(
-        val content: List<ClaudeContent> = emptyList()
+        val content: List<ClaudeContent> = emptyList(),
+        val usage: ClaudeUsage? = null
+    )
+
+    @Serializable
+    private data class ClaudeUsage(
+        val input_tokens: Int? = null,
+        val output_tokens: Int? = null
     )
 
     @Serializable
@@ -477,7 +505,7 @@ object AutoTranslationManager {
             )
         )
 
-        val responseText = executePost(
+        val response = executePost(
             url = settings.baseUrl.trim(),
             body = json.encodeToString(request),
             headers = mapOf(
@@ -487,9 +515,26 @@ object AutoTranslationManager {
             ),
             logTag = settings.provider
         ) ?: return null
+        val responseText = response.text ?: return null
 
         val content = runCatching {
-            json.decodeFromString<ClaudeResponse>(responseText).content
+            json.decodeFromString<ClaudeResponse>(responseText).also { parsed ->
+                val usage = parsed.usage
+                val total = if (usage?.input_tokens != null && usage.output_tokens != null) {
+                    usage.input_tokens + usage.output_tokens
+                } else {
+                    null
+                }
+                TranslationDebugReporter.updateRequestStats(
+                    durationMs = response.durationMs,
+                    promptTokens = usage?.input_tokens,
+                    completionTokens = usage?.output_tokens,
+                    totalTokens = total
+                )
+                TranslationDebugReporter.appendLog(
+                    "claude response: ${response.durationMs}ms, tokens=${total ?: "-"}"
+                )
+            }.content
                 .firstOrNull { it.type == null || it.type == "text" }?.text
         }.getOrNull().orEmpty()
 
@@ -520,7 +565,15 @@ object AutoTranslationManager {
 
     @Serializable
     private data class GeminiResponse(
-        val candidates: List<GeminiCandidate> = emptyList()
+        val candidates: List<GeminiCandidate> = emptyList(),
+        val usageMetadata: GeminiUsageMetadata? = null
+    )
+
+    @Serializable
+    private data class GeminiUsageMetadata(
+        val promptTokenCount: Int? = null,
+        val candidatesTokenCount: Int? = null,
+        val totalTokenCount: Int? = null
     )
 
     @Serializable
@@ -541,7 +594,7 @@ object AutoTranslationManager {
         )
         val url = buildGeminiUrl(settings.baseUrl.trim(), settings.model)
 
-        val responseText = executePost(
+        val response = executePost(
             url = url,
             body = json.encodeToString(request),
             headers = mapOf(
@@ -550,9 +603,21 @@ object AutoTranslationManager {
             ),
             logTag = settings.provider
         ) ?: return null
+        val responseText = response.text ?: return null
 
         val content = runCatching {
-            json.decodeFromString<GeminiResponse>(responseText).candidates
+            json.decodeFromString<GeminiResponse>(responseText).also { parsed ->
+                val usage = parsed.usageMetadata
+                TranslationDebugReporter.updateRequestStats(
+                    durationMs = response.durationMs,
+                    promptTokens = usage?.promptTokenCount,
+                    completionTokens = usage?.candidatesTokenCount,
+                    totalTokens = usage?.totalTokenCount
+                )
+                TranslationDebugReporter.appendLog(
+                    "gemini response: ${response.durationMs}ms, tokens=${usage?.totalTokenCount ?: "-"}"
+                )
+            }.candidates
                 .firstOrNull()?.content?.parts?.firstOrNull()?.text
         }.getOrNull().orEmpty()
 
@@ -584,6 +649,12 @@ object AutoTranslationManager {
      * - 不会在日志中打印 apiKey 明文
      * - 会记录 responseCode、以及 responseText 的前若干字符用于排查
      */
+    private data class ResponseResult(
+        val text: String?,
+        val durationMs: Long,
+        val responseCode: Int
+    )
+
     private fun executePost(
         url: String,
         body: String,
@@ -599,6 +670,7 @@ object AutoTranslationManager {
         }
 
         Log.d(TAG, "executePost: opening connection to $url")
+        val startMs = SystemClock.uptimeMillis()
         return runCatching {
             // 写出请求体
             connection.outputStream.use { output ->
@@ -611,14 +683,18 @@ object AutoTranslationManager {
             val stream =
                 if (responseCode in 200..299) connection.inputStream else connection.errorStream
             val responseText = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+            val durationMs = SystemClock.uptimeMillis() - startMs
 
-            Log.i(TAG, "executePost: responseCode=$responseCode, responseLen=${responseText?.length ?: 0}")
+            Log.i(
+                TAG,
+                "executePost: responseCode=$responseCode, responseLen=${responseText?.length ?: 0}, durationMs=$durationMs"
+            )
             if (responseCode !in 200..299) {
                 Log.w(TAG, "[$logTag] request failed code=$responseCode, response=${responseText?.take(300)}")
                 return@runCatching null
             }
 
-            responseText
+            ResponseResult(responseText, durationMs, responseCode)
         }.getOrElse {
             Log.w(TAG, "[$logTag] request error", it)
             null

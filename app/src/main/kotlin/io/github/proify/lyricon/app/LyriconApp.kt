@@ -53,9 +53,11 @@ class LyriconApp : ModuleApplication() {
             Log.w(TAG, "sync settings on app start failed", it)
         }
         systemUIChannel.wait<ByteArray>(AppBridgeConstants.REQUEST_TRANSLATION_DEBUG_INFO) { data ->
-            val jsonText = data.toString(Charsets.UTF_8)
-            val info = json.safeDecode<TranslationDebugInfo>(jsonText) ?: return@wait
-            TranslationDebugStore.persist(this, info)
+            runCatching {
+                val jsonText = data.toString(Charsets.UTF_8)
+                val info = json.safeDecode<TranslationDebugInfo>(jsonText) ?: return@runCatching
+                TranslationDebugStore.persist(this, info)
+            }
         }
     }
 

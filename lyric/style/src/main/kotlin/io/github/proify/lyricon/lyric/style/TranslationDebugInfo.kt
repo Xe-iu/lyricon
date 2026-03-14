@@ -17,6 +17,10 @@ data class TranslationDebugInfo(
     val targetLanguage: String? = null,
     val songName: String? = null,
     val songArtist: String? = null,
+    val lastRequestDurationMs: Long? = null,
+    val lastPromptTokens: Int? = null,
+    val lastCompletionTokens: Int? = null,
+    val lastTotalTokens: Int? = null,
     val updatedAt: Long = 0L,
     val logLines: List<String> = emptyList()
 )

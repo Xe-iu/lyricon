@@ -392,7 +392,7 @@ private fun TranslationDebugInfoCard() {
     val prefs = context.defaultSharedPreferences
     val raw = rememberStringPreference(prefs, TranslationDebugStore.PREF_KEY_DEBUG_INFO, null).value
     val info = remember(raw) {
-        json.safeDecode<TranslationDebugInfo>(raw)
+        runCatching { json.safeDecode<TranslationDebugInfo>(raw) }.getOrNull()
     }
     val state = info?.state ?: stringResource(R.string.item_translation_status_unknown)
     val detail = info?.detail
@@ -402,6 +402,10 @@ private fun TranslationDebugInfoCard() {
     val song = listOfNotNull(info?.songName, info?.songArtist)
         .joinToString(" - ")
         .ifBlank { null }
+    val durationMs = info?.lastRequestDurationMs
+    val totalTokens = info?.lastTotalTokens
+    val promptTokens = info?.lastPromptTokens
+    val completionTokens = info?.lastCompletionTokens
 
     val statusSummary = buildString {
         append(state)
@@ -410,6 +414,13 @@ private fun TranslationDebugInfoCard() {
             append("\n").append("provider=").append(provider ?: "-")
             append(", model=").append(model ?: "-")
             append(", target=").append(targetLanguage ?: "-")
+        }
+        if (durationMs != null || totalTokens != null || promptTokens != null || completionTokens != null) {
+            append("\n").append("latency=")
+                .append(durationMs?.toString() ?: "-").append("ms")
+            append(", prompt=").append(promptTokens ?: "-")
+            append(", completion=").append(completionTokens ?: "-")
+            append(", total=").append(totalTokens ?: "-")
         }
         if (!song.isNullOrBlank()) {
             append("\n").append(song)
