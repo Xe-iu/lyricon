@@ -53,6 +53,7 @@ class StatusBarViewController(
     private var clockView: TextView? = null
     private var lyricDoubleTapDetector: GestureDetector? = null
     private var clockDoubleTapDetector: GestureDetector? = null
+    private var statusBarTouchListener: View.OnTouchListener? = null
 
     private var colorMonitorView: View? = null
 
@@ -182,8 +183,6 @@ class StatusBarViewController(
 
     private fun setupDoubleTapHandlers() {
         clockView = getClockView() as? TextView
-        val clock = clockView ?: return
-
         if (lyricDoubleTapDetector == null) {
             lyricDoubleTapDetector = GestureDetector(
                 context,
@@ -210,16 +209,21 @@ class StatusBarViewController(
             )
         }
 
-        lyricView.isClickable = true
-        lyricView.setOnTouchListener { _, event ->
-            if (!doubleTapSwitchEnabled) return@setOnTouchListener false
-            lyricDoubleTapDetector?.onTouchEvent(event) ?: false
-        }
-
-        clock.isClickable = true
-        clock.setOnTouchListener { _, event ->
-            if (!doubleTapSwitchEnabled) return@setOnTouchListener false
-            clockDoubleTapDetector?.onTouchEvent(event) ?: false
+        if (statusBarTouchListener == null) {
+            statusBarTouchListener = View.OnTouchListener { _, event ->
+                if (!doubleTapSwitchEnabled || !LyricViewController.isPlaying) return@OnTouchListener false
+                if (isTouchInside(lyricView, event)) {
+                    lyricDoubleTapDetector?.onTouchEvent(event)
+                } else {
+                    clockView?.let { clock ->
+                        if (isTouchInside(clock, event)) {
+                            clockDoubleTapDetector?.onTouchEvent(event)
+                        }
+                    }
+                }
+                false
+            }
+            statusBarView.setOnTouchListener(statusBarTouchListener)
         }
     }
 
@@ -234,6 +238,21 @@ class StatusBarViewController(
                 isPlaying = false
             )
         }
+    }
+
+    private fun isTouchInside(view: View, event: MotionEvent): Boolean {
+        if (!view.isShown) return false
+        val width = view.width
+        val height = view.height
+        if (width <= 0 || height <= 0) return false
+
+        val location = IntArray(2)
+        view.getLocationOnScreen(location)
+        val left = location[0].toFloat()
+        val top = location[1].toFloat()
+        val right = left + width
+        val bottom = top + height
+        return event.rawX in left..right && event.rawY in top..bottom
     }
 
     fun highlightView(idName: String?) {
