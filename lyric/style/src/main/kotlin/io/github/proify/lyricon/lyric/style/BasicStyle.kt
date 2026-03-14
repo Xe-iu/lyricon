@@ -202,7 +202,7 @@ data class BasicStyle(
         const val DOUBLE_TAP_SWITCH_CLOCK: Boolean = false
         const val LISTEN_STATUS_BAR_COLOR: Boolean = true
         const val STATUS_BAR_COLOR_SOURCE: Int = COLOR_SOURCE_CLOCK
-        const val STATUS_BAR_COLOR_ANCHOR_ID: String? = null
+        val STATUS_BAR_COLOR_ANCHOR_ID: String? = null
         const val OLED_SHIFT_ENABLED: Boolean = false
         const val OLED_SHIFT_MODE: Int = OLED_SHIFT_MODE_ON_LYRIC_CHANGE
         const val OLED_SHIFT_RANGE_DP: Float = 2.0f

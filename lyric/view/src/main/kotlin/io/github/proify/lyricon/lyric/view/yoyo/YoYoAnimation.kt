@@ -20,11 +20,11 @@ object YoYoAnimation {
         val action: (View) -> Unit
     )
 
-    fun <T : View> switchContent(
-        target: T,
+    fun switchContent(
+        target: View,
         outConfig: AnimConfig,
         inConfig: AnimConfig,
-        action: (T) -> Unit
+        action: (View) -> Unit
     ) {
         val now = SystemClock.uptimeMillis()
         val lastTs = target.getTag(KEY_ANIM_LAST_TS) as? Long ?: 0L
@@ -35,7 +35,7 @@ object YoYoAnimation {
             return
         }
         if (target.getTag(KEY_ANIM_LOCK) == true) {
-            target.setTag(KEY_ANIM_PENDING, PendingAnim(outConfig, inConfig) { action(it as T) })
+            target.setTag(KEY_ANIM_PENDING, PendingAnim(outConfig, inConfig, action))
             return
         }
         cancelAnimation(target)
@@ -137,7 +137,8 @@ fun <T : View> T.animateUpdate(
     preset: Pair<AnimConfig, AnimConfig> = YoYoPresets.FadeOut_FadeIn,
     block: T.() -> Unit
 ) {
-    YoYoAnimation.switchContent(this, preset.first, preset.second) {
-        it.block()
+    val self = this
+    YoYoAnimation.switchContent(self, preset.first, preset.second) {
+        self.block()
     }
 }

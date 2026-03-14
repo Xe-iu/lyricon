@@ -49,6 +49,7 @@ class StatusBarLyric(
         private const val TAG = "StatusBarLyric"
         private const val JANK_FRAME_THRESHOLD_NS: Long = 48_000_000L
         private const val JANK_CLEAR_COOLDOWN_MS: Long = 300L
+        private const val JANK_CLEAR_AFTER_FRAMES: Int = 3
         private const val WORKER_THREAD_NAME = "LyriconStatusBarWorker"
         @Volatile private var workerThread: HandlerThread? = null
         @Volatile private var workerHandler: Handler? = null
@@ -170,17 +171,24 @@ class StatusBarLyric(
     private val choreographer: Choreographer = Choreographer.getInstance()
     private var lastFrameTimeNs: Long = 0L
     private var lastJankClearMs: Long = 0L
+    private var jankConsecutiveCount: Int = 0
     private val frameCallback = object : Choreographer.FrameCallback {
         override fun doFrame(frameTimeNanos: Long) {
             if (!isAttachedToWindow) return
             if (lastFrameTimeNs != 0L && isPlaying && isShown) {
                 val deltaNs = frameTimeNanos - lastFrameTimeNs
                 if (deltaNs > JANK_FRAME_THRESHOLD_NS) {
+                    jankConsecutiveCount++
                     val nowMs = SystemClock.uptimeMillis()
-                    if (nowMs - lastJankClearMs > JANK_CLEAR_COOLDOWN_MS) {
+                    if (jankConsecutiveCount >= JANK_CLEAR_AFTER_FRAMES
+                        && nowMs - lastJankClearMs > JANK_CLEAR_COOLDOWN_MS
+                    ) {
                         textView.clearAnimationsNow()
                         lastJankClearMs = nowMs
+                        jankConsecutiveCount = 0
                     }
+                } else {
+                    jankConsecutiveCount = 0
                 }
             }
             lastFrameTimeNs = frameTimeNanos
@@ -659,6 +667,7 @@ class StatusBarLyric(
         }
         lastFrameTimeNs = 0L
         lastJankClearMs = 0L
+        jankConsecutiveCount = 0
         choreographer.postFrameCallback(frameCallback)
     }
 
