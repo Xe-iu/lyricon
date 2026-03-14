@@ -34,6 +34,8 @@ import io.github.proify.lyricon.app.compose.preference.SwitchPreference
 import io.github.proify.lyricon.app.compose.preference.rememberBooleanPreference
 import io.github.proify.lyricon.app.compose.preference.rememberIntPreference
 import io.github.proify.lyricon.app.compose.preference.rememberStringPreference
+import io.github.proify.android.extensions.json
+import io.github.proify.android.extensions.safeDecode
 import io.github.proify.lyricon.app.util.LyricPrefs
 import io.github.proify.lyricon.app.util.Utils
 import io.github.proify.lyricon.app.util.editCommit
@@ -489,10 +491,11 @@ class BasicLyricStyleActivity : AbstractLyricActivity() {
                 if (BasicStyle.Defaults.KEYWORD_HIDE_MATCH.isEmpty()) null
                 else BasicStyle.Defaults.KEYWORD_HIDE_MATCH.joinToString()
             )
-            val parsed = if (!keywords.isNullOrBlank() && keywords.trim().startsWith("[")) {
-                io.github.proify.android.extensions.json.safeDecode<List<String>>(keywords, emptyList())
+            val keywordsText = keywords
+            val parsed = if (!keywordsText.isNullOrBlank() && keywordsText.trim().startsWith("[")) {
+                json.safeDecode<List<String>>(keywordsText, emptyList())
             } else {
-                keywords?.lines()?.filter { it.isNotBlank() } ?: emptyList()
+                keywordsText?.lines()?.filter { it.isNotBlank() } ?: emptyList()
             }
             val summary = parsed.joinToString("\n").ifBlank { null }
 
