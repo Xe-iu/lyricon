@@ -25,7 +25,13 @@ object Directory {
         moduleDataDir = File(filesDir, "lyricon")
         tempDir = File(moduleDataDir, ".temp")
         packageDir = File(moduleDataDir, "packages")
+        if (!moduleDataDir.exists()) moduleDataDir.mkdirs()
     }
 
     fun getPackageDataDir(packageName: String): File = File(packageDir, packageName)
+
+    fun getSettingsSnapshotFile(): File {
+        if (!moduleDataDir.exists()) moduleDataDir.mkdirs()
+        return File(moduleDataDir, "settings_snapshot.json.deflate")
+    }
 }

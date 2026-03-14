@@ -99,6 +99,7 @@ object SystemUIHooker : YukiBaseHooker() {
         BridgeCentral.initialize(context)
         NotificationCoverHelper.initialize(context.classLoader)
         ViewVisibilityTracker.initialize(context.classLoader)
+        LyricPrefs.loadSettingsSnapshot()
         initDataChannel()
         ActivePlayerDispatcher.addActivePlayerListener(LyricViewController)
 

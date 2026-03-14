@@ -9,6 +9,11 @@
 package io.github.proify.lyricon.xposed.systemui.util
 
 import de.robv.android.xposed.XSharedPreferences
+import io.github.proify.android.extensions.deflate
+import io.github.proify.android.extensions.inflate
+import io.github.proify.android.extensions.json
+import io.github.proify.android.extensions.safeDecode
+import io.github.proify.android.extensions.safeEncode
 import io.github.proify.lyricon.app.bridge.AppBridge
 import io.github.proify.lyricon.common.PackageNames
 import io.github.proify.lyricon.lyric.style.BasicStyle
@@ -17,6 +22,7 @@ import io.github.proify.lyricon.lyric.style.LyricStyle
 import io.github.proify.lyricon.lyric.style.PackageStyle
 import io.github.proify.lyricon.lyric.style.TranslationConfig
 import io.github.proify.lyricon.lyric.style.TranslationDefaults
+import io.github.proify.lyricon.xposed.systemui.Directory
 
 object LyricPrefs {
     data class TranslationSettings(
@@ -347,6 +353,7 @@ object LyricPrefs {
 
     fun updateSettingsSnapshot(snapshot: LyricSettingsSnapshot?) {
         settingsSnapshot = snapshot
+        persistSettingsSnapshot(snapshot)
     }
 
     private fun TranslationConfig.toTranslationSettings(): TranslationSettings {
@@ -361,5 +368,28 @@ object LyricPrefs {
             ignoreRegex = ignoreRegex,
             customPrompt = customPrompt
         )
+    }
+
+    fun loadSettingsSnapshot(): LyricSettingsSnapshot? {
+        val file = Directory.getSettingsSnapshotFile()
+        if (!file.exists()) return null
+        return runCatching {
+            val jsonText = file.readBytes().inflate().toString(Charsets.UTF_8)
+            val snapshot = json.safeDecode<LyricSettingsSnapshot>(jsonText)
+            settingsSnapshot = snapshot
+            snapshot
+        }.getOrNull()
+    }
+
+    private fun persistSettingsSnapshot(snapshot: LyricSettingsSnapshot?) {
+        val file = Directory.getSettingsSnapshotFile()
+        if (snapshot == null) {
+            runCatching { if (file.exists()) file.delete() }
+            return
+        }
+        runCatching {
+            val payload = json.safeEncode(snapshot).toByteArray(Charsets.UTF_8).deflate()
+            file.writeBytes(payload)
+        }
     }
 }
