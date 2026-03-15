@@ -278,7 +278,7 @@ fun TextPage(scrollBehavior: ScrollBehavior, preferences: SharedPreferences) {
                     title = stringResource(R.string.item_translation_bilingual),
                     summary = stringResource(R.string.item_translation_bilingual_summary),
                     startAction = { IconActions(painterResource(R.drawable.translate_24px)) },
-                    onValueChanged = { enabled ->
+                    onCheckedChange = { enabled ->
                         if (enabled && onlyShowPref.value) {
                             preferences.editCommit { putBoolean("lyric_translation_only_show", false) }
                         }
@@ -289,7 +289,7 @@ fun TextPage(scrollBehavior: ScrollBehavior, preferences: SharedPreferences) {
                     key = "lyric_translation_only_show",
                     title = stringResource(R.string.item_translation_only_show),
                     startAction = { IconActions(painterResource(R.drawable.translate_24px)) },
-                    onValueChanged = { enabled ->
+                    onCheckedChange = { enabled ->
                         if (enabled && bilingualPref.value) {
                             preferences.editCommit { putBoolean("lyric_translation_bilingual", false) }
                         }
