@@ -139,6 +139,7 @@ private fun Content(
     onDelete: (String) -> Unit,
     onDetail: (String) -> Unit
 ) {
+    val context = LocalContext.current
     AppToolBarListContainer(
         title = stringResource(R.string.item_translation_cache_manager),
         actions = {},
@@ -296,7 +297,7 @@ private fun Content(
             Text(text = exportText)
             TextButton(
                 text = stringResource(R.string.item_translation_cache_copy),
-                onClick = { copyText(LocalContext.current, exportText) },
+                onClick = { copyText(context, exportText) },
                 modifier = Modifier.fillMaxWidth()
             )
             TextButton(
