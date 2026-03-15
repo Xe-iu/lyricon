@@ -36,6 +36,7 @@ import io.github.proify.lyricon.app.compose.preference.InputType
 import io.github.proify.lyricon.app.compose.preference.RectInputPreference
 import io.github.proify.lyricon.app.compose.preference.SwitchPreference
 import io.github.proify.lyricon.app.compose.preference.TextColorPreference
+import io.github.proify.lyricon.app.compose.preference.rememberBooleanPreference
 import io.github.proify.lyricon.app.compose.preference.rememberStringPreference
 import io.github.proify.lyricon.app.util.editCommit
 import io.github.proify.lyricon.app.util.TranslationDebugStore
@@ -261,11 +262,38 @@ fun TextPage(scrollBehavior: ScrollBehavior, preferences: SharedPreferences) {
                     title = stringResource(R.string.item_translation_enable),
                     startAction = { IconActions(painterResource(R.drawable.translate_24px)) },
                 )
+                val bilingualPref = rememberBooleanPreference(
+                    sharedPreferences = preferences,
+                    key = "lyric_translation_bilingual",
+                    defaultValue = true
+                )
+                val onlyShowPref = rememberBooleanPreference(
+                    sharedPreferences = preferences,
+                    key = "lyric_translation_only_show",
+                    defaultValue = false
+                )
+                SwitchPreference(
+                    sharedPreferences = preferences,
+                    key = "lyric_translation_bilingual",
+                    title = stringResource(R.string.item_translation_bilingual),
+                    summary = stringResource(R.string.item_translation_bilingual_summary),
+                    startAction = { IconActions(painterResource(R.drawable.translate_24px)) },
+                    onValueChanged = { enabled ->
+                        if (enabled && onlyShowPref.value) {
+                            preferences.editCommit { putBoolean("lyric_translation_only_show", false) }
+                        }
+                    }
+                )
                 SwitchPreference(
                     sharedPreferences = preferences,
                     key = "lyric_translation_only_show",
                     title = stringResource(R.string.item_translation_only_show),
                     startAction = { IconActions(painterResource(R.drawable.translate_24px)) },
+                    onValueChanged = { enabled ->
+                        if (enabled && bilingualPref.value) {
+                            preferences.editCommit { putBoolean("lyric_translation_bilingual", false) }
+                        }
+                    }
                 )
                 SwitchPreference(
                     sharedPreferences = preferences,

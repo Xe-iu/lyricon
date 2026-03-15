@@ -172,6 +172,8 @@
     <string name="option_text_placeholder_format_name">Title Only</string>
     <string name="item_text_placeholder_format">Placeholder</string>
     <string name="item_translation_enable">Enable auto translation</string>
+    <string name="item_translation_bilingual">Bilingual</string>
+    <string name="item_translation_bilingual_summary">Show original and translation</string>
     <string name="item_translation_only_show">Show translation only</string>
     <string name="item_translation_wait_ready">Wait for translation</string>
     <string name="item_translation_wait_ready_summary">Keep original lyrics until translation is ready</string>

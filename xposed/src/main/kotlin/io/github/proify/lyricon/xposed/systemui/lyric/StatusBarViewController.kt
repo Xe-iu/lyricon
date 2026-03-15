@@ -126,6 +126,7 @@ class StatusBarViewController(
         }
         lyricView.updateStyle(lyricStyle)
         val translationSettings = LyricPrefs.getActiveTranslationSettings()
+        lyricView.updateDisplayTranslation(displayTranslation = translationSettings.bilingualEnabled)
         lyricView.updateTranslationDisplayConfig(
             onlyShowTranslation = translationSettings.onlyShowTranslation,
             waitReady = translationSettings.waitTranslationReady

@@ -26,6 +26,7 @@ object LyricPrefs {
         val maxCacheSize: Int,
         val ignoreRegex: String,
         val customPrompt: String,
+        val bilingualEnabled: Boolean,
         val onlyShowTranslation: Boolean,
         val waitTranslationReady: Boolean
     ) {
@@ -98,6 +99,7 @@ object LyricPrefs {
             maxCacheSize = maxCacheSize,
             ignoreRegex = ignoreRegex,
             customPrompt = customPrompt,
+            bilingualEnabled = bilingualEnabled,
             onlyShowTranslation = onlyShowTranslation,
             waitTranslationReady = waitTranslationReady
         )
