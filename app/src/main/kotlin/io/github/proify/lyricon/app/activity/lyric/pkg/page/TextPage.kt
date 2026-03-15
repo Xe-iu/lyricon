@@ -30,6 +30,7 @@ import io.github.proify.lyricon.app.R
 import io.github.proify.lyricon.app.compose.IconActions
 import io.github.proify.lyricon.app.compose.custom.miuix.basic.AppBasicComponent
 import io.github.proify.lyricon.app.compose.custom.miuix.basic.ScrollBehavior
+import io.github.proify.lyricon.app.compose.custom.miuix.extra.SuperArrow
 import io.github.proify.lyricon.app.compose.preference.CheckboxPreference
 import io.github.proify.lyricon.app.compose.preference.InputPreference
 import io.github.proify.lyricon.app.compose.preference.InputType
@@ -50,6 +51,7 @@ import top.yukonga.miuix.kmp.utils.overScrollVertical
 
 @Composable
 fun TextPage(scrollBehavior: ScrollBehavior, preferences: SharedPreferences) {
+    val context = LocalContext.current
     LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
@@ -293,6 +295,9 @@ fun TextPage(scrollBehavior: ScrollBehavior, preferences: SharedPreferences) {
                         if (enabled && bilingualPref.value) {
                             preferences.editCommit { putBoolean("lyric_translation_bilingual", false) }
                         }
+                        if (!enabled && preferences.getBoolean("lyric_translation_wait_ready", true)) {
+                            preferences.editCommit { putBoolean("lyric_translation_wait_ready", false) }
+                        }
                     }
                 )
                 SwitchPreference(
@@ -301,6 +306,11 @@ fun TextPage(scrollBehavior: ScrollBehavior, preferences: SharedPreferences) {
                     title = stringResource(R.string.item_translation_wait_ready),
                     summary = stringResource(R.string.item_translation_wait_ready_summary),
                     startAction = { IconActions(painterResource(R.drawable.ic_autopause)) },
+                    onCheckedChange = { enabled ->
+                        if (enabled && !preferences.getBoolean("lyric_translation_only_show", false)) {
+                            preferences.editCommit { putBoolean("lyric_translation_wait_ready", false) }
+                        }
+                    }
                 )
                 TranslationProviderPreference(preferences)
                 TranslationTargetLanguagePreference(preferences)
@@ -342,6 +352,17 @@ fun TextPage(scrollBehavior: ScrollBehavior, preferences: SharedPreferences) {
                     title = stringResource(R.string.item_translation_base_url),
                     defaultValue = "https://api.openai.com/v1/chat/completions",
                     leftAction = { IconActions(painterResource(R.drawable.link_24px)) },
+                )
+                SuperArrow(
+                    title = stringResource(R.string.item_translation_cache_manager),
+                    onClick = {
+                        context.startActivity(
+                            android.content.Intent(
+                                context,
+                                io.github.proify.lyricon.app.activity.lyric.TranslationCacheActivity::class.java
+                            )
+                        )
+                    }
                 )
                 TranslationDebugInfoCard()
             }

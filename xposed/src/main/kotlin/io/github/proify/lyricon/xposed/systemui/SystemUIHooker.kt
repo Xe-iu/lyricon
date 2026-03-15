@@ -28,6 +28,7 @@ import io.github.proify.lyricon.xposed.systemui.lyric.LyricViewController
 import io.github.proify.lyricon.xposed.systemui.lyric.StatusBarViewController
 import io.github.proify.lyricon.xposed.systemui.lyric.StatusBarViewManager
 import io.github.proify.lyricon.xposed.systemui.lyric.TranslationDebugReporter
+import io.github.proify.lyricon.xposed.systemui.lyric.AutoTranslationManager
 import io.github.proify.lyricon.xposed.systemui.util.CrashDetector
 import io.github.proify.lyricon.xposed.systemui.util.LyricPrefs
 import io.github.proify.lyricon.xposed.systemui.util.NotificationCoverHelper
@@ -135,6 +136,29 @@ object SystemUIHooker : YukiBaseHooker() {
         }
         channel.wait(key = AppBridgeConstants.REQUEST_UPDATE_LYRIC_STYLE) {
             StatusBarViewManager.forEach { it.updateLyricStyle(LyricPrefs.getLyricStyle()) }
+        }
+        channel.wait(key = AppBridgeConstants.REQUEST_TRANSLATION_CACHE_LIST) {
+            val list = AutoTranslationManager.getCacheEntrySummaries()
+            val payload = json.safeEncode(list).toByteArray(Charsets.UTF_8)
+            channel.put(AppBridgeConstants.REQUEST_TRANSLATION_CACHE_LIST_CALLBACK, payload)
+        }
+        channel.wait<String>(key = AppBridgeConstants.REQUEST_TRANSLATION_CACHE_DETAIL) { id ->
+            val detail = AutoTranslationManager.getCacheEntryDetail(id)
+            val payload = json.safeEncode(detail).toByteArray(Charsets.UTF_8)
+            channel.put(AppBridgeConstants.REQUEST_TRANSLATION_CACHE_DETAIL_CALLBACK, payload)
+        }
+        channel.wait<String>(key = AppBridgeConstants.REQUEST_TRANSLATION_CACHE_DELETE) { id ->
+            AutoTranslationManager.deleteCacheEntry(id)
+        }
+        channel.wait(key = AppBridgeConstants.REQUEST_TRANSLATION_CACHE_CLEAR) {
+            AutoTranslationManager.clearCacheEntries()
+        }
+        channel.wait(key = AppBridgeConstants.REQUEST_TRANSLATION_CACHE_EXPORT) {
+            val payload = AutoTranslationManager.exportCacheEntries().toByteArray(Charsets.UTF_8)
+            channel.put(AppBridgeConstants.REQUEST_TRANSLATION_CACHE_EXPORT_CALLBACK, payload)
+        }
+        channel.wait<String>(key = AppBridgeConstants.REQUEST_TRANSLATION_CACHE_IMPORT) { jsonText ->
+            AutoTranslationManager.importCacheEntries(jsonText)
         }
         channel.wait<String>(key = AppBridgeConstants.REQUEST_HIGHLIGHT_VIEW) { id ->
             StatusBarViewManager.forEach { it.highlightView(id) }

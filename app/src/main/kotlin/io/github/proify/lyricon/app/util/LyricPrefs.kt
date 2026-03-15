@@ -253,7 +253,12 @@ object LyricPrefs {
                 ?: io.github.proify.lyricon.common.Constants.DEFAULT_TRANSLATION_CUSTOM_PROMPT
         val bilingualEnabled = prefs.getBoolean(KEY_TRANSLATION_BILINGUAL, true)
         val onlyShowTranslation = prefs.getBoolean(KEY_TRANSLATION_ONLY, false)
-        val waitTranslationReady = prefs.getBoolean(KEY_TRANSLATION_WAIT_READY, true)
+        val waitTranslationReady =
+            if (onlyShowTranslation) {
+                prefs.getBoolean(KEY_TRANSLATION_WAIT_READY, true)
+            } else {
+                false
+            }
 
         return TranslationConfig(
             enabled = prefs.getBoolean(KEY_TRANSLATION_ENABLED, false),

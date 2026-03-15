@@ -31,6 +31,7 @@ object AutoTranslationManager {
     // 缓存目录与文件名
     private const val CACHE_DIR_NAME = "_translation"
     private const val CACHE_FILE_NAME = "llm_translation_cache.json"
+    private const val ENTRY_FILE_NAME = "llm_translation_entries.json"
     private const val ANTHROPIC_VERSION = "2023-06-01"
 
     @Volatile
@@ -55,6 +56,10 @@ object AutoTranslationManager {
 
     @Volatile
     private var cacheLoaded = false
+    @Volatile
+    private var entryCacheLoaded = false
+    private val entryLock = Any()
+    private val translationEntries = mutableListOf<io.github.proify.lyricon.lyric.style.TranslationCacheEntry>()
 
     /**
      * 获取缓存文件路径（app data 下的子目录）。
@@ -162,6 +167,46 @@ object AutoTranslationManager {
         }
     }
 
+    private fun getEntryFile(): File {
+        val dir = Directory.getPackageDataDir(CACHE_DIR_NAME)
+        if (!dir.exists()) {
+            val created = dir.mkdirs()
+            Log.i(TAG, "create cache dir=${dir.absolutePath}, created=$created")
+        }
+        return File(dir, ENTRY_FILE_NAME)
+    }
+
+    private fun ensureEntryCacheLoaded() {
+        if (entryCacheLoaded) return
+        synchronized(entryLock) {
+            if (entryCacheLoaded) return
+            val file = getEntryFile()
+            if (file.exists()) {
+                runCatching {
+                    val content = file.readText(Charsets.UTF_8)
+                    val loaded = json.decodeFromString<List<io.github.proify.lyricon.lyric.style.TranslationCacheEntry>>(content)
+                    translationEntries.clear()
+                    translationEntries.addAll(loaded)
+                }.onFailure {
+                    Log.w(TAG, "load translation entries failed", it)
+                }
+            }
+            entryCacheLoaded = true
+        }
+    }
+
+    private fun persistEntries() {
+        synchronized(entryLock) {
+            runCatching {
+                val file = getEntryFile()
+                val jsonText = json.encodeToString(translationEntries)
+                file.writeText(jsonText, Charsets.UTF_8)
+            }.onFailure {
+                Log.w(TAG, "persist translation entries failed", it)
+            }
+        }
+    }
+
     /**
      * 将一批翻译结果写入内存缓存并持久化到磁盘。
      * pairs: List of (sourceText, translatedText)
@@ -196,6 +241,8 @@ object AutoTranslationManager {
     fun translateSongIfNeededAsync(
         song: Song?,
         settings: LyricPrefs.TranslationSettings,
+        packageName: String?,
+        coverFilePath: String?,
         callback: (Song?) -> Unit
     ) {
         if (!settings.isUsable || song?.lyrics.isNullOrEmpty()) {
@@ -222,7 +269,7 @@ object AutoTranslationManager {
                 settings = settings
             )
             val translatedSong = runCatching {
-                translateSong(song, settings)
+                translateSong(song, settings, packageName, coverFilePath)
             }.getOrElse {
                 Log.w(TAG, "translate song failed", it)
                 TranslationDebugReporter.updateState(
@@ -252,7 +299,9 @@ object AutoTranslationManager {
      */
     private fun translateSong(
         song: Song,
-        settings: LyricPrefs.TranslationSettings
+        settings: LyricPrefs.TranslationSettings,
+        packageName: String?,
+        coverFilePath: String?
     ): Song {
         // 更新最大缓存并清理
         if (settings.maxCacheSize > 0) {
@@ -346,6 +395,18 @@ object AutoTranslationManager {
             return song
         }
 
+        runCatching {
+            recordTranslationEntry(
+                song = song,
+                settings = settings,
+                translationByText = translationByText,
+                packageName = packageName,
+                coverFilePath = coverFilePath
+            )
+        }.onFailure {
+            Log.w(TAG, "record translation entry failed", it)
+        }
+
         // 返回 song 的深拷贝并替换 translation 字段
         val copied = song.deepCopy()
         copied.lyrics = copied.lyrics?.map { line ->
@@ -358,6 +419,162 @@ object AutoTranslationManager {
             }
         }
         return copied
+    }
+
+    private fun recordTranslationEntry(
+        song: Song,
+        settings: LyricPrefs.TranslationSettings,
+        translationByText: Map<String, String>,
+        packageName: String?,
+        coverFilePath: String?
+    ) {
+        ensureEntryCacheLoaded()
+        val now = System.currentTimeMillis()
+        val lines = mutableListOf<io.github.proify.lyricon.lyric.style.TranslationCacheLine>()
+        var size = 0
+        song.lyrics?.forEach { line ->
+            val source = line.text?.trim().orEmpty()
+            if (source.isBlank()) return@forEach
+            val translated = translationByText[source] ?: line.translation
+            lines += io.github.proify.lyricon.lyric.style.TranslationCacheLine(
+                source = source,
+                translated = translated
+            )
+            size += source.length + (translated?.length ?: 0)
+        }
+        if (lines.isEmpty()) return
+
+        val idRaw = listOf(
+            packageName.orEmpty(),
+            settings.provider,
+            settings.model,
+            settings.targetLanguage,
+            song.name.orEmpty(),
+            song.artist.orEmpty(),
+            now.toString()
+        ).joinToString("|")
+        val id = MessageDigest.getInstance("SHA-256")
+            .digest(idRaw.toByteArray(Charsets.UTF_8))
+            .joinToString("") { b -> "%02x".format(b) }
+
+        val coverFileName = coverFilePath?.let { path ->
+            runCatching {
+                val src = File(path)
+                if (!src.exists()) return@runCatching null
+                val ext = src.extension.takeIf { it.isNotBlank() } ?: "png"
+                val name = "cover_$id.$ext"
+                val dest = File(getCacheFile().parentFile, name)
+                src.copyTo(dest, overwrite = true)
+                name
+            }.getOrNull()
+        }
+
+        val entry = io.github.proify.lyricon.lyric.style.TranslationCacheEntry(
+            id = id,
+            packageName = packageName.orEmpty(),
+            provider = settings.provider,
+            model = settings.model,
+            targetLanguage = settings.targetLanguage,
+            songName = song.name,
+            songArtist = song.artist,
+            createdAt = now,
+            size = size,
+            coverFileName = coverFileName,
+            lines = lines
+        )
+
+        synchronized(entryLock) {
+            translationEntries.add(0, entry)
+        }
+        persistEntries()
+    }
+
+    fun getCacheEntrySummaries(): List<io.github.proify.lyricon.lyric.style.TranslationCacheEntrySummary> {
+        ensureEntryCacheLoaded()
+        return synchronized(entryLock) {
+            translationEntries.map {
+                io.github.proify.lyricon.lyric.style.TranslationCacheEntrySummary(
+                    id = it.id,
+                    packageName = it.packageName,
+                    provider = it.provider,
+                    model = it.model,
+                    targetLanguage = it.targetLanguage,
+                    songName = it.songName,
+                    songArtist = it.songArtist,
+                    createdAt = it.createdAt,
+                    size = it.size,
+                    coverFileName = it.coverFileName
+                )
+            }
+        }
+    }
+
+    fun getCacheEntryDetail(id: String): io.github.proify.lyricon.lyric.style.TranslationCacheEntryDetail? {
+        ensureEntryCacheLoaded()
+        val entry = synchronized(entryLock) {
+            translationEntries.firstOrNull { it.id == id }
+        } ?: return null
+        val coverBase64 = entry.coverFileName?.let { name ->
+            runCatching {
+                val file = File(getCacheFile().parentFile, name)
+                if (!file.exists()) return@runCatching null
+                android.util.Base64.encodeToString(file.readBytes(), android.util.Base64.NO_WRAP)
+            }.getOrNull()
+        }
+        return io.github.proify.lyricon.lyric.style.TranslationCacheEntryDetail(
+            entry = entry,
+            coverBase64 = coverBase64
+        )
+    }
+
+    fun deleteCacheEntry(id: String) {
+        ensureEntryCacheLoaded()
+        synchronized(entryLock) {
+            val iterator = translationEntries.iterator()
+            while (iterator.hasNext()) {
+                val entry = iterator.next()
+                if (entry.id == id) {
+                    entry.coverFileName?.let { name ->
+                        runCatching { File(getCacheFile().parentFile, name).delete() }
+                    }
+                    iterator.remove()
+                    break
+                }
+            }
+        }
+        persistEntries()
+    }
+
+    fun clearCacheEntries() {
+        ensureEntryCacheLoaded()
+        synchronized(entryLock) {
+            translationEntries.forEach { entry ->
+                entry.coverFileName?.let { name ->
+                    runCatching { File(getCacheFile().parentFile, name).delete() }
+                }
+            }
+            translationEntries.clear()
+        }
+        persistEntries()
+    }
+
+    fun exportCacheEntries(): String {
+        ensureEntryCacheLoaded()
+        return synchronized(entryLock) {
+            json.encodeToString(translationEntries)
+        }
+    }
+
+    fun importCacheEntries(jsonText: String) {
+        val entries = runCatching {
+            json.decodeFromString<List<io.github.proify.lyricon.lyric.style.TranslationCacheEntry>>(jsonText)
+        }.getOrNull() ?: return
+        ensureEntryCacheLoaded()
+        synchronized(entryLock) {
+            val existingIds = translationEntries.map { it.id }.toHashSet()
+            entries.forEach { if (it.id !in existingIds) translationEntries.add(it) }
+        }
+        persistEntries()
     }
 
     private fun requestTranslation(

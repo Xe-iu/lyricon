@@ -89,6 +89,7 @@ object LyricPrefs {
     }
 
     private fun TranslationConfig.toTranslationSettings(): TranslationSettings {
+        val waitReady = if (onlyShowTranslation) waitTranslationReady else false
         return TranslationSettings(
             enabled = enabled,
             provider = provider,
@@ -101,7 +102,7 @@ object LyricPrefs {
             customPrompt = customPrompt,
             bilingualEnabled = bilingualEnabled,
             onlyShowTranslation = onlyShowTranslation,
-            waitTranslationReady = waitTranslationReady
+            waitTranslationReady = waitReady
         )
     }
 }

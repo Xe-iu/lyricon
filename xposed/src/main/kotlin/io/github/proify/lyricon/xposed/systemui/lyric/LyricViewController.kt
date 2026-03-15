@@ -39,11 +39,13 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
     private const val MSG_SHOW_ROMA = 8
     private const val MSG_SONG_TRANSLATED = 9
     private const val MSG_PLAYBACK_STATE_DELAYED = 10
+    private const val MSG_PERIODIC_REFRESH = 11
 
     private const val UPDATE_INTERVAL_MS = 1000L / 60L
     private const val PLAYBACK_STALE_MS = 2500L
     private const val PLAYBACK_STOP_DELAY_MS = 1200L
     private const val PLAYBACK_SWITCH_GRACE_MS = 1500L
+    private const val PERIODIC_REFRESH_MS = 1000L
 
     @Volatile
     var isPlaying: Boolean = false
@@ -92,9 +94,12 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
 
         this.isPlaying = isPlaying
         if (isPlaying) {
+            uiHandler.removeMessages(MSG_PERIODIC_REFRESH)
+            uiHandler.sendEmptyMessageDelayed(MSG_PERIODIC_REFRESH, PERIODIC_REFRESH_MS)
             uiHandler.removeMessages(MSG_PLAYBACK_STATE_DELAYED)
             uiHandler.obtainMessage(MSG_PLAYBACK_STATE, 1, 0).sendToTarget()
         } else {
+            uiHandler.removeMessages(MSG_PERIODIC_REFRESH)
             val now = SystemClock.uptimeMillis()
             if (now - lastSongChangeMs < PLAYBACK_SWITCH_GRACE_MS) {
                 uiHandler.removeMessages(MSG_PLAYBACK_STATE_DELAYED)
@@ -110,8 +115,17 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
         // if (DEBUG) YLog.debug(tag = TAG, msg = "onPositionChanged: $position")
 
         val now = SystemClock.uptimeMillis()
+        val previous = lastPosition
         lastPosition = position
         lastPositionUpdateMs = now
+
+        if (!isPlaying && position != previous) {
+            isPlaying = true
+            uiHandler.removeMessages(MSG_PLAYBACK_STATE_DELAYED)
+            uiHandler.removeMessages(MSG_PERIODIC_REFRESH)
+            uiHandler.sendEmptyMessageDelayed(MSG_PERIODIC_REFRESH, PERIODIC_REFRESH_MS)
+            uiHandler.obtainMessage(MSG_PLAYBACK_STATE, 1, 0).sendToTarget()
+        }
 
         // 移除队列中旧的进度消息，确保合并
         uiHandler.removeMessages(MSG_POSITION)
@@ -211,10 +225,13 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
                         if (isPlaying || recentlyActive) {
                             view.setPlaying(true)
                         }
+                        if (lastPositionUpdateMs > 0L && recentlyActive) {
+                            view.setPosition(lastPosition)
+                        } else {
+                            view.setPosition(0L)
+                        }
                     }
-                    if (song != null && lastPositionUpdateMs > 0L) {
-                        view.setPosition(lastPosition)
-                    }
+                    view.refreshLyricState()
                     view.logoView.apply {
                         coverMinTimestamp = System.currentTimeMillis()
                         strategy?.updateContent()
@@ -235,6 +252,17 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
                         view.setPlaying(false)
                     }
                 }
+                MSG_PERIODIC_REFRESH -> {
+                    if (isPlaying) {
+                        if (lastPositionUpdateMs > 0L) {
+                            view.setPosition(lastPosition)
+                        } else {
+                            view.setPosition(0L)
+                        }
+                        view.refreshLyricState()
+                        uiHandler.sendEmptyMessageDelayed(MSG_PERIODIC_REFRESH, PERIODIC_REFRESH_MS)
+                    }
+                }
                 MSG_POSITION -> {
                     val pos = (msg.arg1.toLong() shl 32) or (msg.arg2.toLong() and 0xFFFFFFFFL)
                     view.setPosition(pos)
@@ -252,6 +280,17 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
                     val version = msg.arg1.toLong() shl 32 or (msg.arg2.toLong() and 0xFFFFFFFFL)
                     if (version == songVersion) {
                         view.setSong(msg.obj as? Song)
+                        val now = SystemClock.uptimeMillis()
+                        val recentlyActive = now - lastPositionUpdateMs <= PLAYBACK_STALE_MS
+                        if (isPlaying || recentlyActive) {
+                            view.setPlaying(true)
+                            if (lastPositionUpdateMs > 0L && recentlyActive) {
+                                view.setPosition(lastPosition)
+                            } else {
+                                view.setPosition(0L)
+                            }
+                        }
+                        view.refreshLyricState()
                     }
                 }
             }
@@ -328,7 +367,15 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
         songVersion++
         val version = songVersion
 
-        AutoTranslationManager.translateSongIfNeededAsync(song, settings) { translated ->
+        val coverPath = runCatching {
+            NotificationCoverHelper.getCoverFile(activePackage).absolutePath
+        }.getOrNull()
+        AutoTranslationManager.translateSongIfNeededAsync(
+            song,
+            settings,
+            activePackage,
+            coverPath
+        ) { translated ->
             val message = uiHandler.obtainMessage(MSG_SONG_TRANSLATED, translated)
             message.arg1 = (version shr 32).toInt()
             message.arg2 = (version and 0xFFFFFFFFL).toInt()

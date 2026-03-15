@@ -355,6 +355,12 @@ class StatusBarLyric(
         Log.d(TAG, "textVisibility: ${textView.isVisible}")
     }
 
+    fun refreshLyricState() {
+        refreshLyricTimeoutState()
+        textView.updateViewsVisibility()
+        updateVisibility()
+    }
+
     fun setSong(song: Song?) {
         lyricType = SONG
         lastSong = song

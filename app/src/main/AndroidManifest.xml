@@ -63,6 +63,9 @@
         <activity
             android:name=".activity.lyric.ViewRulesTreeActivity"
             android:label="@string/activity_view_rules" />
+        <activity
+            android:name=".activity.lyric.TranslationCacheActivity"
+            android:label="@string/item_translation_cache_manager" />
 
         <meta-data
             android:name="xposeddescription"
