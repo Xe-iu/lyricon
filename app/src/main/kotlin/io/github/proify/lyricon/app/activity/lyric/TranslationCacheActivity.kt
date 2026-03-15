@@ -9,17 +9,23 @@ package io.github.proify.lyricon.app.activity.lyric
 import android.os.Bundle
 import android.text.format.DateFormat
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
@@ -35,11 +41,10 @@ import io.github.proify.lyricon.app.activity.BaseActivity
 import io.github.proify.lyricon.app.bridge.AppBridgeConstants
 import io.github.proify.lyricon.lyric.style.TranslationCacheEntryDetail
 import io.github.proify.lyricon.lyric.style.TranslationCacheEntrySummary
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import android.util.Base64
-import android.graphics.BitmapFactory
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -213,16 +218,6 @@ private fun Content(
             show = showDetail,
             onDismissRequest = { showDetail.value = false }
         ) {
-            val cover = remember(detail?.coverBase64) {
-                detail?.coverBase64?.let { decodeBitmap(it) }
-            }
-            if (cover != null) {
-                androidx.compose.foundation.Image(
-                    bitmap = cover,
-                    contentDescription = null,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
             val entry = detail?.entry
             val requestTime = entry?.createdAt?.let {
                 DateFormat.format("yyyy-MM-dd HH:mm", it).toString()
@@ -294,12 +289,33 @@ private fun Content(
             onDismissRequest = { showExport.value = false }
         ) {
             val exportText = exportJsonState.value.orEmpty()
-            Text(text = exportText)
-            TextButton(
-                text = stringResource(R.string.item_translation_cache_copy),
-                onClick = { copyText(context, exportText) },
-                modifier = Modifier.fillMaxWidth()
-            )
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                TextButton(
+                    text = stringResource(R.string.item_translation_cache_copy),
+                    onClick = { copyText(context, exportText) },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.textButtonColorsPrimary()
+                )
+                TextButton(
+                    text = stringResource(R.string.cancel),
+                    onClick = { showExport.value = false },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.textButtonColorsPrimary()
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            val exportScroll = rememberScrollState()
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(exportScroll)
+            ) {
+                Text(text = exportText)
+            }
             TextButton(
                 text = stringResource(R.string.ok),
                 onClick = { showExport.value = false },
@@ -315,31 +331,39 @@ private fun Content(
             show = showImport,
             onDismissRequest = { showImport.value = false }
         ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                TextButton(
+                    text = stringResource(R.string.item_translation_cache_import),
+                    onClick = {
+                        onImport(importText.value)
+                        showImport.value = false
+                    },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.textButtonColorsPrimary()
+                )
+                TextButton(
+                    text = stringResource(R.string.cancel),
+                    onClick = { showImport.value = false },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.textButtonColorsPrimary()
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            val importScroll = rememberScrollState()
             top.yukonga.miuix.kmp.basic.TextField(
                 value = importText.value,
                 onValueChange = { importText.value = it },
                 modifier = Modifier
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .heightIn(max = 420.dp)
                     .fillMaxWidth()
-            )
-            TextButton(
-                text = stringResource(R.string.item_translation_cache_import),
-                onClick = {
-                    onImport(importText.value)
-                    showImport.value = false
-                },
-                modifier = Modifier.fillMaxWidth()
+                    .verticalScroll(importScroll)
             )
         }
     }
-}
-
-private fun decodeBitmap(base64: String): ImageBitmap? {
-    return runCatching {
-        val bytes = Base64.decode(base64, Base64.DEFAULT)
-        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-        bitmap?.asImageBitmap()
-    }.getOrNull()
 }
 
 private fun copyText(context: Context, text: String) {
