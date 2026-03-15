@@ -229,7 +229,7 @@ object LyricViewController : ActivePlayerListener, Handler.Callback,
                 }
                 MSG_PLAYBACK_STATE_DELAYED -> {
                     val now = SystemClock.uptimeMillis()
-                    if (now - lastSongChangeMs < PLAYBACK_SWITCH_GRACE_MS) return
+                    if (now - lastSongChangeMs < PLAYBACK_SWITCH_GRACE_MS) return true
                     val stale = now - lastPositionUpdateMs > PLAYBACK_STALE_MS
                     if (stale) {
                         view.setPlaying(false)
