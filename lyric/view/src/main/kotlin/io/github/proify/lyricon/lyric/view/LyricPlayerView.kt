@@ -48,6 +48,8 @@ open class LyricPlayerView(
     private var isEnableRelativeProgressHighlight = false
     private var isEnteringInterludeMode = false
     private var animationsEnabled = true
+    private var translationOnly = false
+    private var waitTranslationReady = true
 
     // data models
     private var lineModelList: List<RichLyricLineModel>? = null
@@ -149,6 +151,8 @@ open class LyricPlayerView(
             if (!contains(textRecycleLineView)) {
                 addView(textRecycleLineView, defaultLayoutParams)
                 updateTextLineViewStyle(styleConfig)
+                textRecycleLineView.translationOnly = translationOnly
+                textRecycleLineView.waitTranslationReady = waitTranslationReady
             }
             val old = textRecycleLineView.line
 
@@ -216,6 +220,21 @@ open class LyricPlayerView(
     }
 
     private var _transitionConfig: String? = null
+
+    fun setTranslationDisplayMode(onlyShowTranslation: Boolean, waitReady: Boolean) {
+        if (translationOnly == onlyShowTranslation && waitTranslationReady == waitReady) return
+        translationOnly = onlyShowTranslation
+        waitTranslationReady = waitReady
+        textRecycleLineView.translationOnly = translationOnly
+        textRecycleLineView.waitTranslationReady = waitTranslationReady
+        forEach {
+            if (it is RichLyricLineView) {
+                it.translationOnly = translationOnly
+                it.waitTranslationReady = waitTranslationReady
+            }
+        }
+        updateViewsVisibility()
+    }
 
     fun updateDisplayTranslation(
         displayTranslation: Boolean = isDisplayTranslation,
@@ -539,6 +558,8 @@ open class LyricPlayerView(
         setMainLyricPlayListener(mainPlayListener)
         setSecondaryLyricPlayListener(secondaryPlayListener)
         setTransitionConfig(_transitionConfig)
+        translationOnly = this@LyricPlayerView.translationOnly
+        waitTranslationReady = this@LyricPlayerView.waitTranslationReady
     }
 
     /**

@@ -261,6 +261,19 @@ fun TextPage(scrollBehavior: ScrollBehavior, preferences: SharedPreferences) {
                     title = stringResource(R.string.item_translation_enable),
                     startAction = { IconActions(painterResource(R.drawable.translate_24px)) },
                 )
+                SwitchPreference(
+                    sharedPreferences = preferences,
+                    key = "lyric_translation_only_show",
+                    title = stringResource(R.string.item_translation_only_show),
+                    startAction = { IconActions(painterResource(R.drawable.translate_24px)) },
+                )
+                SwitchPreference(
+                    sharedPreferences = preferences,
+                    key = "lyric_translation_wait_ready",
+                    title = stringResource(R.string.item_translation_wait_ready),
+                    summary = stringResource(R.string.item_translation_wait_ready_summary),
+                    startAction = { IconActions(painterResource(R.drawable.ic_autopause)) },
+                )
                 TranslationProviderPreference(preferences)
                 TranslationTargetLanguagePreference(preferences)
                 TranslationApiKeyPreference(preferences)

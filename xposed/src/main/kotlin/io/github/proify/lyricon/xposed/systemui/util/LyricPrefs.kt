@@ -25,7 +25,9 @@ object LyricPrefs {
         val baseUrl: String,
         val maxCacheSize: Int,
         val ignoreRegex: String,
-        val customPrompt: String
+        val customPrompt: String,
+        val onlyShowTranslation: Boolean,
+        val waitTranslationReady: Boolean
     ) {
         val isUsable: Boolean
             get() = enabled
@@ -95,7 +97,9 @@ object LyricPrefs {
             baseUrl = baseUrl,
             maxCacheSize = maxCacheSize,
             ignoreRegex = ignoreRegex,
-            customPrompt = customPrompt
+            customPrompt = customPrompt,
+            onlyShowTranslation = onlyShowTranslation,
+            waitTranslationReady = waitTranslationReady
         )
     }
 }

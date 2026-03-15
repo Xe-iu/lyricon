@@ -304,6 +304,8 @@ class StatusBarLyric(
     private var lastSong: Song? = null
     private var lastText: String? = null
     private var lyricType = NONE
+    private var translationOnly: Boolean = false
+    private var waitTranslationReady: Boolean = true
 
     fun setPlaying(playing: Boolean) {
         if (lastPlaying == playing) return
@@ -386,6 +388,14 @@ class StatusBarLyric(
         displayRoma: Boolean = textView.isDisplayRoma
     ) {
         textView.updateDisplayTranslation(displayTranslation, displayRoma)
+    }
+
+    fun updateTranslationDisplayConfig(onlyShowTranslation: Boolean, waitReady: Boolean) {
+        if (translationOnly == onlyShowTranslation && waitTranslationReady == waitReady) return
+        translationOnly = onlyShowTranslation
+        waitTranslationReady = waitReady
+        textView.setTranslationDisplayMode(onlyShowTranslation, waitReady)
+        updateVisibility()
     }
 
     fun setOplusCapsuleVisibility(visible: Boolean) {

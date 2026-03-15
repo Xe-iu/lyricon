@@ -36,6 +36,20 @@ class RichLyricLineView(
     val main = LyricLineView(context)
     val secondary = LyricLineView(context).apply { visibleIfChanged = false }
 
+    var translationOnly: Boolean = false
+        set(value) {
+            if (field == value) return
+            field = value
+            updateAllLines()
+        }
+
+    var waitTranslationReady: Boolean = true
+        set(value) {
+            if (field == value) return
+            field = value
+            updateAllLines()
+        }
+
     var alwaysShowSecondary = false
 
     var renderScale = 1.0f
@@ -188,13 +202,21 @@ class RichLyricLineView(
             return
         }
 
+        val translationReady =
+            !source.translation.isNullOrBlank() || !source.translationWords.isNullOrEmpty()
+        val useTranslationAsMain = translationOnly && (translationReady || !waitTranslationReady)
+        val mainText = if (useTranslationAsMain) source.translation else source.text
+        val mainWords = if (useTranslationAsMain) source.translationWords else source.words
+        val mainMetadata =
+            if (useTranslationAsMain) lyricMetadataOf("translation" to "true") else source.metadata
+
         // 仅在启用相对进度且非标题行时，尝试为整行生成一个虚拟的 Word 节点
         val shouldGenerate = enableRelativeProgress && !source.isTitleLine()
         val processedWords = if (shouldGenerate) {
-            calculateRelativeProgressWords(source, source.text, source.words)
-        } else source.words
+            calculateRelativeProgressWords(source, mainText, mainWords)
+        } else mainWords
 
-        val isGenerated = processedWords !== source.words
+        val isGenerated = processedWords !== mainWords
 
         main.setLyric(
             LyricLine(
@@ -202,8 +224,8 @@ class RichLyricLineView(
                 end = source.end,
                 duration = source.duration,
                 isAlignedRight = source.isAlignedRight,
-                metadata = source.metadata,
-                text = source.text,
+                metadata = mainMetadata,
+                text = mainText,
                 words = processedWords
             )
         )
@@ -240,6 +262,11 @@ class RichLyricLineView(
             duration = source.duration
             isAlignedRight = source.isAlignedRight
 
+            val translationReady =
+                !source.translation.isNullOrBlank() || !source.translationWords.isNullOrEmpty()
+            val effectiveDisplayTranslation =
+                displayTranslation && !(translationOnly && (translationReady || !waitTranslationReady))
+
             when {
                 // 1. 优先展示副行歌词
                 !source.secondary.isNullOrBlank() || !source.secondaryWords.isNullOrEmpty() -> {
@@ -252,7 +279,7 @@ class RichLyricLineView(
                     isGenerated = words !== source.secondaryWords
                 }
                 // 2. 其次展示翻译
-                displayTranslation && (!source.translation.isNullOrBlank() || !source.translationWords.isNullOrEmpty()) -> {
+                effectiveDisplayTranslation && translationReady -> {
                     text = source.translation
                     words = calculateRelativeProgressWords(
                         timing,

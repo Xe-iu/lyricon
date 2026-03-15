@@ -172,6 +172,9 @@
     <string name="option_text_placeholder_format_name">僅歌名</string>
     <string name="item_text_placeholder_format">占位格式</string>
     <string name="item_translation_enable">啟用自動翻譯</string>
+    <string name="item_translation_only_show">僅顯示翻譯</string>
+    <string name="item_translation_wait_ready">等待翻譯完成再隱藏原文</string>
+    <string name="item_translation_wait_ready_summary">翻譯未完成前仍顯示原文</string>
     <string name="item_translation_api_provider">大模型 API</string>
     <string name="item_translation_target_language">目標語言</string>
     <string name="item_translation_api_key">API Key</string>

@@ -107,6 +107,8 @@ object LyricPrefs {
     private const val KEY_TRANSLATION_CACHE_SIZE = "lyric_translation_cache_size"
     private const val KEY_TRANSLATION_IGNORE_REGEX = "lyric_translation_ignore_regex"
     private const val KEY_TRANSLATION_CUSTOM_PROMPT = "lyric_translation_custom_prompt"
+    private const val KEY_TRANSLATION_ONLY = "lyric_translation_only_show"
+    private const val KEY_TRANSLATION_WAIT_READY = "lyric_translation_wait_ready"
 
     private const val SNAPSHOT_DIR = "lyricon"
     private const val SNAPSHOT_FILE = "settings_snapshot.json"
@@ -220,6 +222,8 @@ object LyricPrefs {
         editor.putString(KEY_TRANSLATION_CACHE_SIZE, config.maxCacheSize.toString())
         editor.putString(KEY_TRANSLATION_IGNORE_REGEX, config.ignoreRegex)
         editor.putString(KEY_TRANSLATION_CUSTOM_PROMPT, config.customPrompt)
+        editor.putBoolean(KEY_TRANSLATION_ONLY, config.onlyShowTranslation)
+        editor.putBoolean(KEY_TRANSLATION_WAIT_READY, config.waitTranslationReady)
     }
 
     private fun readTranslationConfig(prefs: SharedPreferences): TranslationConfig {
@@ -245,6 +249,8 @@ object LyricPrefs {
         val customPrompt =
             prefs.getString(KEY_TRANSLATION_CUSTOM_PROMPT, null)
                 ?: io.github.proify.lyricon.common.Constants.DEFAULT_TRANSLATION_CUSTOM_PROMPT
+        val onlyShowTranslation = prefs.getBoolean(KEY_TRANSLATION_ONLY, false)
+        val waitTranslationReady = prefs.getBoolean(KEY_TRANSLATION_WAIT_READY, true)
 
         return TranslationConfig(
             enabled = prefs.getBoolean(KEY_TRANSLATION_ENABLED, false),
@@ -258,7 +264,9 @@ object LyricPrefs {
             baseUrl = baseUrl,
             maxCacheSize = maxCacheSize,
             ignoreRegex = ignoreRegex,
-            customPrompt = customPrompt
+            customPrompt = customPrompt,
+            onlyShowTranslation = onlyShowTranslation,
+            waitTranslationReady = waitTranslationReady
         )
     }
 }

@@ -18,5 +18,7 @@ data class TranslationConfig(
     val baseUrl: String = TranslationDefaults.DEFAULT_OPENAI_BASE_URL,
     val maxCacheSize: Int = TranslationDefaults.DEFAULT_CACHE_SIZE,
     val ignoreRegex: String = TranslationDefaults.DEFAULT_IGNORE_REGEX,
-    val customPrompt: String = io.github.proify.lyricon.common.Constants.DEFAULT_TRANSLATION_CUSTOM_PROMPT
+    val customPrompt: String = io.github.proify.lyricon.common.Constants.DEFAULT_TRANSLATION_CUSTOM_PROMPT,
+    val onlyShowTranslation: Boolean = false,
+    val waitTranslationReady: Boolean = true
 )

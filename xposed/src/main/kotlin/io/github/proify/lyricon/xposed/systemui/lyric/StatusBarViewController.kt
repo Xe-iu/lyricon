@@ -30,6 +30,7 @@ import io.github.proify.lyricon.xposed.systemui.util.ClockColorMonitor
 import io.github.proify.lyricon.xposed.systemui.util.OnColorChangeListener
 import io.github.proify.lyricon.xposed.systemui.util.TextViewColorMonitor
 import io.github.proify.lyricon.xposed.systemui.util.ViewVisibilityController
+import io.github.proify.lyricon.xposed.systemui.util.LyricPrefs
 
 /**
  * 状态栏歌词视图控制器：负责歌词视图的注入、位置锚定及显隐逻辑
@@ -124,6 +125,11 @@ class StatusBarViewController(
             //YLog.info("Lyric location unchanged: $lastAnchor")
         }
         lyricView.updateStyle(lyricStyle)
+        val translationSettings = LyricPrefs.getActiveTranslationSettings()
+        lyricView.updateTranslationDisplayConfig(
+            onlyShowTranslation = translationSettings.onlyShowTranslation,
+            waitReady = translationSettings.waitTranslationReady
+        )
     }
 
     /**
